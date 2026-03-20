@@ -1,13 +1,29 @@
 {
   "agents": [
-    {
-      "name": "PM",
-      "path": "D:\\WorkSpace\\GatherTech\\PM",
-      "group": "PM"
-    }
+    { "name": "PM", "path": "D:\\WorkSpace\\GatherTech\\PM", "group": "PM" },
+    { "name": "Reviewer", "path": "D:\\WorkSpace\\GatherTech\\Reviewer", "group": "PM" },
+    { "name": "GST-develop", "path": "D:\\WorkSpace\\GatherTech\\Core\\GST-develop", "group": "Core" },
+    { "name": "Test", "path": "D:\\WorkSpace\\GatherTech\\Core\\GST-develop\\tests", "group": "Core" },
+    { "name": "GST-fda-part11", "path": "D:\\WorkSpace\\GatherTech\\Core\\GST-fda-part11", "group": "Core" },
+    { "name": "GST-process-vision", "path": "D:\\WorkSpace\\GatherTech\\Core\\GST-process-vision", "group": "Core" },
+    { "name": "GST-smb", "path": "D:\\WorkSpace\\GatherTech\\Core\\GST-smb", "group": "Core" },
+    { "name": "SECSGEM", "path": "D:\\WorkSpace\\GatherTech\\Core\\SECSGEM", "group": "Core" },
+    { "name": "CodeAnalyzer", "path": "D:\\WorkSpace\\GatherTech\\Core\\gst-code-analyzer", "group": "Core" },
+    { "name": "AgentLauncher", "path": "D:\\WorkSpace\\GatherTech\\Core\\gst-agent-launcher", "group": "Core" },
+    { "name": "ProcessVision-App", "path": "D:\\WorkSpace\\GatherTech\\Jope\\NTUST\\GST.App.ProcessVision", "group": "App" },
+    { "name": "SMB-App", "path": "D:\\WorkSpace\\GatherTech\\Jope\\Jope.SMB.App", "group": "App" },
+    { "name": "PLC-Monitor", "path": "D:\\WorkSpace\\GatherTech\\Jope\\Jope.PLC.MonitorSystem", "group": "App" },
+    { "name": "Simulator", "path": "D:\\WorkSpace\\GatherTech\\Core\\Simulator\\GST.Simulator", "group": "App" },
+    { "name": "GatherTech-Web", "path": "D:\\WorkSpace\\GatherTech\\Core\\gathertech-web-redesign", "group": "App" },
+    { "name": "GatherTech-Docs", "path": "D:\\WorkSpace\\GatherTech\\Core\\gathertech-docs", "group": "App" },
+    { "name": "SECS-Reference", "path": "D:\\WorkSpace\\GatherTech\\Core\\secs-reference-tool", "group": "App" },
+    { "name": "IPC-Setup", "path": "D:\\WorkSpace\\GatherTech\\ipc-setup", "group": "App" },
+    { "name": "ENR_DUC", "path": "D:\\WorkSpace\\GatherTech\\Leyu\\ENR\\NXP\\Code\\ENR_DUC-dev-simulation", "group": "Leyu" },
+    { "name": "Inspection-HOST", "path": "D:\\WorkSpace\\GatherTech\\Leyu\\Leyu.InspectionHost", "group": "Leyu" },
+    { "name": "Inspection-EQ", "path": "D:\\WorkSpace\\GatherTech\\Leyu\\AI_Inspection_Cleaning_Demo", "group": "Leyu" }
   ],
   "monitor": {
     "enabled": true,
-    "command": "monitor-cli --plan max20 --theme dark --timezone Asia/Taipei"
+    "command": "monitor-cli --plan max20 --theme dark --timezone Asia/Taipei --view realtime --time-format 24h --refresh-rate 5"
   }
 }
