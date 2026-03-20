@@ -1,0 +1,84 @@
+package config
+
+import (
+	"embed"
+	"encoding/json"
+	"os"
+	"path/filepath"
+)
+
+//go:embed default.json
+var defaultConfigFS embed.FS
+
+// Agent represents a single agent entry in the configuration.
+type Agent struct {
+	Name  string `json:"name"`
+	Path  string `json:"path"`
+	Group string `json:"group"`
+}
+
+// Monitor represents the monitor configuration.
+type Monitor struct {
+	Enabled bool   `json:"enabled"`
+	Command string `json:"command"`
+}
+
+// Config represents the top-level configuration.
+type Config struct {
+	Agents  []Agent `json:"agents"`
+	Monitor Monitor `json:"monitor"`
+}
+
+// Load reads the configuration from the following locations (in priority order):
+//  1. ~/.config/gst-launcher/agents.json
+//  2. agents.json next to the executable
+//  3. Embedded default.json
+func Load() (*Config, error) {
+	// 1. User config directory
+	home, err := os.UserHomeDir()
+	if err == nil {
+		userPath := filepath.Join(home, ".config", "gst-launcher", "agents.json")
+		if cfg, err := loadFromFile(userPath); err == nil {
+			return cfg, nil
+		}
+	}
+
+	// 2. Executable directory
+	exePath, err := os.Executable()
+	if err == nil {
+		exeDir := filepath.Dir(exePath)
+		localPath := filepath.Join(exeDir, "agents.json")
+		if cfg, err := loadFromFile(localPath); err == nil {
+			return cfg, nil
+		}
+	}
+
+	// 3. Embedded default
+	return loadDefault()
+}
+
+func loadFromFile(path string) (*Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+func loadDefault() (*Config, error) {
+	data, err := defaultConfigFS.ReadFile("default.json")
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}

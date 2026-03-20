@@ -1,0 +1,13 @@
+{
+  "agents": [
+    {
+      "name": "PM",
+      "path": "D:\\WorkSpace\\GatherTech\\PM",
+      "group": "PM"
+    }
+  ],
+  "monitor": {
+    "enabled": true,
+    "command": "monitor-cli --plan max20 --theme dark --timezone Asia/Taipei"
+  }
+}
