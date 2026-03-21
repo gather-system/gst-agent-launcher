@@ -70,6 +70,33 @@ func loadFromFile(path string) (*Config, error) {
 	return &cfg, nil
 }
 
+// EnsureUserConfig creates ~/.config/gst-launcher/agents.json from the
+// embedded default if it does not already exist.
+func EnsureUserConfig() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+
+	dir := filepath.Join(home, ".config", "gst-launcher")
+	target := filepath.Join(dir, "agents.json")
+
+	if _, err := os.Stat(target); err == nil {
+		return // already exists
+	}
+
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return
+	}
+
+	data, err := defaultConfigFS.ReadFile("default.json")
+	if err != nil {
+		return
+	}
+
+	os.WriteFile(target, data, 0o644)
+}
+
 func loadDefault() (*Config, error) {
 	data, err := defaultConfigFS.ReadFile("default.json")
 	if err != nil {
