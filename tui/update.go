@@ -1,6 +1,13 @@
 package tui
 
-import tea "charm.land/bubbletea/v2"
+import (
+	"time"
+
+	tea "charm.land/bubbletea/v2"
+
+	"github.com/gather-system/gst-agent-launcher/config"
+	"github.com/gather-system/gst-agent-launcher/launcher"
+)
 
 // Update handles incoming messages and updates the model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -16,44 +23,104 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg.err
 		return m, nil
 
+	case launchResultMsg:
+		m.result = msg.result
+		m.view = viewResult
+		return m, func() tea.Msg {
+			time.Sleep(2 * time.Second)
+			return autoQuitMsg{}
+		}
+
+	case launchErrMsg:
+		m.err = msg.err
+		m.view = viewList
+		return m, nil
+
+	case autoQuitMsg:
+		return m, tea.Quit
+
 	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
+		switch m.view {
+		case viewList:
+			return m.updateList(msg)
+		case viewConfirm:
+			return m.updateConfirm(msg)
+		case viewResult:
 			return m, tea.Quit
-
-		case "up", "k":
-			m.moveCursorUp()
-
-		case "down", "j":
-			m.moveCursorDown()
-
-		case "space", " ":
-			m.toggleCurrent()
-
-		case "enter":
-			return m, tea.Quit
-
-		case "a":
-			m.toggleAll()
-
-		case "c":
-			m.toggleGroup("Core")
-
-		case "p":
-			m.toggleGroup("PM")
-
-		case "o":
-			m.toggleGroup("App")
-
-		case "l":
-			m.toggleGroup("Leyu")
-
-		case "m":
-			m.monitorOn = !m.monitorOn
 		}
 	}
 
 	return m, nil
+}
+
+// updateList handles key presses in the list view.
+func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q", "ctrl+c":
+		return m, tea.Quit
+
+	case "up", "k":
+		m.moveCursorUp()
+
+	case "down", "j":
+		m.moveCursorDown()
+
+	case "space", " ":
+		m.toggleCurrent()
+
+	case "enter":
+		if m.selectedCount() > 0 || m.monitorOn {
+			m.view = viewConfirm
+		}
+
+	case "a":
+		m.toggleAll()
+
+	case "c":
+		m.toggleGroup("Core")
+
+	case "p":
+		m.toggleGroup("PM")
+
+	case "o":
+		m.toggleGroup("App")
+
+	case "l":
+		m.toggleGroup("Leyu")
+
+	case "m":
+		m.monitorOn = !m.monitorOn
+	}
+
+	return m, nil
+}
+
+// updateConfirm handles key presses in the confirm view.
+func (m Model) updateConfirm(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "y":
+		return m, m.doLaunch()
+	case "n", "escape", "q":
+		m.view = viewList
+	}
+	return m, nil
+}
+
+// doLaunch creates a command that performs the actual launch.
+func (m Model) doLaunch() tea.Cmd {
+	agents := m.selectedAgents()
+	var monitor *config.Monitor
+	if m.monitorOn && m.config != nil {
+		monitor = &m.config.Monitor
+	}
+
+	return func() tea.Msg {
+		result, err := launcher.LaunchAll(agents, monitor)
+		if err != nil {
+			return launchErrMsg{err}
+		}
+		return launchResultMsg{result}
+	}
 }
 
 // moveCursorUp moves the cursor up, skipping group headers.

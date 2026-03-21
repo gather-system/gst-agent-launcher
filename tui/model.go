@@ -4,6 +4,16 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/gather-system/gst-agent-launcher/config"
+	"github.com/gather-system/gst-agent-launcher/launcher"
+)
+
+// viewState represents the current TUI screen.
+type viewState int
+
+const (
+	viewList    viewState = iota // agent selection list
+	viewConfirm                 // launch confirmation
+	viewResult                  // launch result
 )
 
 // groupOrder defines the display order of groups.
@@ -24,6 +34,8 @@ type Model struct {
 	cursor    int           // current cursor position in items
 	selected  map[int]bool  // keyed by agent index in config.Agents
 	monitorOn bool          // monitor toggle
+	view      viewState     // current screen
+	result    *launcher.LaunchResult
 	err       error
 }
 
@@ -31,6 +43,7 @@ type Model struct {
 func NewModel() Model {
 	return Model{
 		selected: make(map[int]bool),
+		view:     viewList,
 	}
 }
 
@@ -45,9 +58,19 @@ func (m Model) Init() tea.Cmd {
 	}
 }
 
+// selectedAgents returns the list of selected agents in display order.
+func (m Model) selectedAgents() []config.Agent {
+	var agents []config.Agent
+	for _, item := range m.items {
+		if !item.isGroup && m.selected[item.index] {
+			agents = append(agents, *item.agent)
+		}
+	}
+	return agents
+}
+
 // buildItems creates the flat list of group headers and agent items.
 func buildItems(cfg *config.Config) []listItem {
-	// Group agents by group name.
 	grouped := make(map[string][]int)
 	for i, agent := range cfg.Agents {
 		grouped[agent.Group] = append(grouped[agent.Group], i)
@@ -98,7 +121,20 @@ type configLoadedMsg struct {
 	config *config.Config
 }
 
+// launchResultMsg is sent when the launch completes.
+type launchResultMsg struct {
+	result *launcher.LaunchResult
+}
+
+// launchErrMsg is sent when the launch fails.
+type launchErrMsg struct {
+	err error
+}
+
 // errMsg is sent when an error occurs.
 type errMsg struct {
 	err error
 }
+
+// autoQuitMsg triggers automatic exit after launch.
+type autoQuitMsg struct{}
