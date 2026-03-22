@@ -136,5 +136,7 @@ type errMsg struct {
 	err error
 }
 
-// autoQuitMsg triggers automatic exit after launch.
-type autoQuitMsg struct{}
+// resetSelection clears all agent selections, keeping monitorOn intact.
+func (m *Model) resetSelection() {
+	m.selected = make(map[int]bool)
+}

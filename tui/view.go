@@ -154,7 +154,7 @@ func (m Model) viewResult() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(dimStyle.Render("2 秒後自動退出..."))
+	b.WriteString(helpStyle.Render("按任意鍵返回選單 / q 退出"))
 	b.WriteString("\n")
 
 	return b.String()
