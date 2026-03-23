@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"time"
-
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/gather-system/gst-agent-launcher/config"
@@ -26,18 +24,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case launchResultMsg:
 		m.result = msg.result
 		m.view = viewResult
-		return m, func() tea.Msg {
-			time.Sleep(2 * time.Second)
-			return autoQuitMsg{}
-		}
+		return m, nil
 
 	case launchErrMsg:
 		m.err = msg.err
 		m.view = viewList
 		return m, nil
-
-	case autoQuitMsg:
-		return m, tea.Quit
 
 	case tea.KeyPressMsg:
 		switch m.view {
@@ -46,7 +38,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case viewConfirm:
 			return m.updateConfirm(msg)
 		case viewResult:
-			return m, tea.Quit
+			return m.updateResult(msg)
 		}
 	}
 
@@ -92,6 +84,18 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.monitorOn = !m.monitorOn
 	}
 
+	return m, nil
+}
+
+// updateResult handles key presses in the result view.
+func (m Model) updateResult(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q", "ctrl+c":
+		return m, tea.Quit
+	default:
+		m.resetSelection()
+		m.view = viewList
+	}
 	return m, nil
 }
 
