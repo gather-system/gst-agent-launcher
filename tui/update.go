@@ -39,6 +39,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case autoQuitMsg:
 		return m, tea.Quit
 
+	case toastMsg:
+		if msg.id == m.toastTimer {
+			m.toast = ""
+		}
+		return m, nil
+
 	case tea.KeyPressMsg:
 		switch m.view {
 		case viewList:
@@ -71,7 +77,14 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		if m.selectedCount() > 0 || m.monitorOn {
 			m.view = viewConfirm
+		} else {
+			return m, setToast(&m, "請先選擇至少一個 Agent")
 		}
+
+	case "escape":
+		m.resetSelection()
+		m.monitorOn = false
+		return m, setToast(&m, "已清除所有選擇")
 
 	case "a":
 		m.toggleAll()
@@ -93,6 +106,16 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// setToast sets a toast message and returns a command to clear it after 2 seconds.
+func setToast(m *Model, msg string) tea.Cmd {
+	m.toastTimer++
+	m.toast = msg
+	id := m.toastTimer
+	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+		return toastMsg{id}
+	})
 }
 
 // updateConfirm handles key presses in the confirm view.
