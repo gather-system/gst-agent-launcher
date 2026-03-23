@@ -39,6 +39,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				break
 			}
 		}
+		// Save session for r-key restore.
+		config.SaveSession(m.selectedAgentNames(), m.monitorOn)
 		return m, nil
 
 	case launchErrMsg:
@@ -136,6 +138,15 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		} else {
 			cmd = setToast(&m, "Monitor: OFF")
 		}
+
+	case "r":
+		session, err := config.LoadSession()
+		if err != nil {
+			return m, setToast(&m, "沒有上次的選擇紀錄")
+		}
+		m.restoreSession(session)
+		count := m.selectedCount()
+		return m, setToast(&m, fmt.Sprintf("已恢復上次選擇 (%d)", count))
 
 	case "M":
 		if m.config != nil && m.config.Monitor.Command != "" {
