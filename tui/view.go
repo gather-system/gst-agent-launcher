@@ -16,6 +16,8 @@ func (m Model) View() tea.View {
 		return tea.NewView(m.viewResult())
 	case viewHelp:
 		return tea.NewView(m.viewHelpOverlay())
+	case viewProject:
+		return tea.NewView(m.viewProjectSelect())
 	default:
 		return tea.NewView(m.viewList())
 	}
@@ -227,6 +229,36 @@ func (m Model) viewResult() string {
 	return b.String()
 }
 
+// viewProjectSelect renders the project selection screen.
+func (m Model) viewProjectSelect() string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("GST Agent Launcher — 專案選取"))
+	b.WriteString("\n\n")
+
+	for i, name := range m.projectNames {
+		cursor := "  "
+		if i == m.projectCursor {
+			cursor = cursorStyle.Render("> ")
+		}
+
+		proj := m.config.Projects[name]
+		label := name
+		if i == m.projectCursor {
+			label = cursorStyle.Render(name)
+		}
+		desc := dimStyle.Render(fmt.Sprintf("(%d agents) %s", len(proj.Agents), proj.Description))
+
+		b.WriteString(fmt.Sprintf("%s%s %s\n", cursor, label, desc))
+	}
+
+	b.WriteString("\n")
+	b.WriteString(m.renderHelpBar())
+	b.WriteString("\n")
+
+	return b.String()
+}
+
 // viewHelpOverlay renders the help overlay screen.
 func (m Model) viewHelpOverlay() string {
 	var b strings.Builder
@@ -262,6 +294,7 @@ func (m Model) viewHelpOverlay() string {
 	b.WriteString("  m         切換 Monitor\n")
 	b.WriteString("  M         單獨啟動 Monitor\n")
 	b.WriteString("  /         搜尋過濾\n")
+	b.WriteString("  P         專案快選\n")
 	b.WriteString("  ?         顯示此幫助\n")
 	b.WriteString("  q         退出\n")
 	b.WriteString("\n")
@@ -281,6 +314,8 @@ func (m Model) renderHelpBar() string {
 		return helpStyle.Render("任意鍵:返回選單 q:退出")
 	case viewHelp:
 		return helpStyle.Render("按任意鍵關閉")
+	case viewProject:
+		return helpStyle.Render("↑↓:選擇 Enter:確認 Esc:取消")
 	default:
 		if m.searchMode {
 			return helpStyle.Render("輸入搜尋 | Esc:清除 Enter:確認 Space:勾選")

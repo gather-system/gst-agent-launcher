@@ -23,10 +23,17 @@ type Monitor struct {
 	Command string `json:"command"`
 }
 
+// Project represents a predefined agent selection preset.
+type Project struct {
+	Agents      []string `json:"agents"`
+	Description string   `json:"description"`
+}
+
 // Config represents the top-level configuration.
 type Config struct {
-	Agents  []Agent `json:"agents"`
-	Monitor Monitor `json:"monitor"`
+	Agents   []Agent            `json:"agents"`
+	Monitor  Monitor            `json:"monitor"`
+	Projects map[string]Project `json:"projects,omitempty"`
 }
 
 // Load reads the configuration from the following locations (in priority order):

@@ -25,5 +25,19 @@
   "monitor": {
     "enabled": true,
     "command": "monitor-cli --plan max20 --theme dark --timezone Asia/Taipei --view realtime --time-format 24h --refresh-rate 5"
+  },
+  "projects": {
+    "ProcessVision": {
+      "agents": ["PM", "GST-process-vision", "ProcessVision-App", "Reviewer"],
+      "description": "製程監控系統"
+    },
+    "SMB": {
+      "agents": ["PM", "GST-smb", "SMB-App", "Reviewer"],
+      "description": "SMB 應用系統"
+    },
+    "Leyu": {
+      "agents": ["PM", "Inspection-HOST", "Inspection-EQ", "Reviewer"],
+      "description": "樂予檢測系統"
+    }
   }
 }

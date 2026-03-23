@@ -24,6 +24,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			_, err := os.Stat(agent.Path)
 			m.pathValid[i] = err == nil
 		}
+		m.projectNames = buildProjectNames(m.config)
 		return m, nil
 
 	case errMsg:
@@ -74,6 +75,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case viewHelp:
 			m.view = viewList
 			return m, nil
+		case viewProject:
+			return m.updateProject(msg)
 		}
 	}
 
@@ -158,6 +161,12 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "?":
 		m.view = viewHelp
 
+	case "P":
+		if len(m.projectNames) > 0 {
+			m.view = viewProject
+			m.projectCursor = 0
+		}
+
 	case "/":
 		m.searchMode = true
 		m.searchQuery = ""
@@ -199,6 +208,30 @@ func (m Model) updateSearch(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.searchQuery += key
 			m.adjustCursorForSearch()
 		}
+	}
+	return m, nil
+}
+
+// updateProject handles key presses in the project selection view.
+func (m Model) updateProject(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "escape", "q":
+		m.view = viewList
+	case "up", "k":
+		if m.projectCursor > 0 {
+			m.projectCursor--
+		}
+	case "down", "j":
+		if m.projectCursor < len(m.projectNames)-1 {
+			m.projectCursor++
+		}
+	case "enter":
+		name := m.projectNames[m.projectCursor]
+		count := m.selectProject(name)
+		m.view = viewList
+		return m, setToast(&m, fmt.Sprintf("已選取 %s (%d agents)", name, count))
+	case "ctrl+c":
+		return m, tea.Quit
 	}
 	return m, nil
 }
