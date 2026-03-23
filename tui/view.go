@@ -67,7 +67,9 @@ func (m Model) viewList() string {
 		}
 
 		name := item.agent.Name
-		if i == m.cursor {
+		if !m.pathValid[item.index] {
+			name = invalidStyle.Render(name + " [!]")
+		} else if i == m.cursor {
 			name = cursorStyle.Render(name)
 		}
 
@@ -113,8 +115,21 @@ func (m Model) viewConfirm() string {
 	}
 
 	for _, agent := range agents {
-		b.WriteString(fmt.Sprintf("  %s %s [%s]\n",
-			selectedStyle.Render("●"), agent.Name, agent.Group))
+		valid := true
+		for i, a := range m.config.Agents {
+			if a.Name == agent.Name && !m.pathValid[i] {
+				valid = false
+				break
+			}
+		}
+		if !valid {
+			b.WriteString(fmt.Sprintf("  %s %s [%s] %s\n",
+				dimStyle.Render("●"), invalidStyle.Render(agent.Name), agent.Group,
+				warningStyle.Render("(路徑不存在，將跳過)")))
+		} else {
+			b.WriteString(fmt.Sprintf("  %s %s [%s]\n",
+				selectedStyle.Render("●"), agent.Name, agent.Group))
+		}
 	}
 
 	b.WriteString("\n")

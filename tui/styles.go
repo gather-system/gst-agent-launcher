@@ -58,6 +58,10 @@ var (
 	warningStyle = lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("#FF6600"))
+
+	invalidStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#626262")).
+			Faint(true)
 )
 
 // groupStyle returns the lipgloss style for a given group name.

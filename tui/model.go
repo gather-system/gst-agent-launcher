@@ -33,6 +33,7 @@ type Model struct {
 	items     []listItem    // flat list of group headers + agents
 	cursor    int           // current cursor position in items
 	selected  map[int]bool  // keyed by agent index in config.Agents
+	pathValid map[int]bool  // keyed by agent index, true if path exists
 	monitorOn bool          // monitor toggle
 	view      viewState     // current screen
 	result    *launcher.LaunchResult
