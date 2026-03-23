@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -18,6 +19,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.items = buildItems(m.config)
 		m.cursor = firstSelectableIndex(m.items)
 		m.monitorOn = m.config.Monitor.Enabled
+		m.pathValid = make(map[int]bool)
+		for i, agent := range m.config.Agents {
+			_, err := os.Stat(agent.Path)
+			m.pathValid[i] = err == nil
+		}
 		return m, nil
 
 	case errMsg:
