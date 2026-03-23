@@ -82,6 +82,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // updateList handles key presses in the list view.
 func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if m.searchMode {
+		return m.updateSearch(msg)
+	}
+
 	var cmd tea.Cmd
 
 	switch msg.String() {
@@ -154,6 +158,10 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "?":
 		m.view = viewHelp
 
+	case "/":
+		m.searchMode = true
+		m.searchQuery = ""
+
 	case "M":
 		if m.config != nil && m.config.Monitor.Command != "" {
 			return m, m.doLaunchMonitorOnly()
@@ -161,6 +169,38 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, cmd
+}
+
+// updateSearch handles key presses in search mode.
+func (m Model) updateSearch(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	key := msg.String()
+	switch key {
+	case "escape":
+		m.searchMode = false
+		m.searchQuery = ""
+		m.cursor = firstSelectableIndex(m.items)
+	case "enter":
+		m.searchMode = false
+	case "backspace":
+		if len(m.searchQuery) > 0 {
+			m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
+			m.adjustCursorForSearch()
+		}
+	case "up", "k":
+		m.moveCursorUp()
+	case "down", "j":
+		m.moveCursorDown()
+	case "space", " ":
+		m.toggleCurrent()
+	case "ctrl+c":
+		return m, tea.Quit
+	default:
+		if len(key) == 1 {
+			m.searchQuery += key
+			m.adjustCursorForSearch()
+		}
+	}
+	return m, nil
 }
 
 // setToast sets a toast message and returns a command to clear it after 2 seconds.
@@ -232,20 +272,20 @@ func (m Model) doLaunchMonitorOnly() tea.Cmd {
 	}
 }
 
-// moveCursorUp moves the cursor up, skipping group headers.
+// moveCursorUp moves the cursor up, skipping group headers and search-hidden items.
 func (m *Model) moveCursorUp() {
 	for i := m.cursor - 1; i >= 0; i-- {
-		if !m.items[i].isGroup {
+		if !m.items[i].isGroup && m.matchesSearch(m.items[i]) {
 			m.cursor = i
 			return
 		}
 	}
 }
 
-// moveCursorDown moves the cursor down, skipping group headers.
+// moveCursorDown moves the cursor down, skipping group headers and search-hidden items.
 func (m *Model) moveCursorDown() {
 	for i := m.cursor + 1; i < len(m.items); i++ {
-		if !m.items[i].isGroup {
+		if !m.items[i].isGroup && m.matchesSearch(m.items[i]) {
 			m.cursor = i
 			return
 		}

@@ -55,13 +55,28 @@ func (m Model) viewList() string {
 		b.WriteString("\n\n")
 	}
 
-	// Render list items
+	// Render list items (filtered by search query)
 	for i, item := range m.items {
 		if item.isGroup {
+			// Skip group header if no children match search
+			hasMatch := false
+			for j := i + 1; j < len(m.items) && !m.items[j].isGroup; j++ {
+				if m.matchesSearch(m.items[j]) {
+					hasMatch = true
+					break
+				}
+			}
+			if !hasMatch {
+				continue
+			}
 			sel, tot := m.groupCount(item.group)
 			style := groupStyle(item.group)
 			b.WriteString(style.Render(fmt.Sprintf("── %s (%d/%d) ──", item.group, sel, tot)))
 			b.WriteString("\n")
+			continue
+		}
+
+		if !m.matchesSearch(item) {
 			continue
 		}
 
@@ -93,12 +108,17 @@ func (m Model) viewList() string {
 
 	// Status bar
 	b.WriteString("\n")
-	monitorStatus := "OFF"
-	if m.monitorOn {
-		monitorStatus = "ON"
+	var statusText string
+	if m.searchMode {
+		statusText = fmt.Sprintf("搜尋: %s_", m.searchQuery)
+	} else {
+		monitorStatus := "OFF"
+		if m.monitorOn {
+			monitorStatus = "ON"
+		}
+		statusText = fmt.Sprintf("已選: %d 個 Agent | Monitor: %s | Enter=啟動 q=退出",
+			m.selectedCount(), monitorStatus)
 	}
-	statusText := fmt.Sprintf("已選: %d 個 Agent | Monitor: %s | Enter=啟動 q=退出",
-		m.selectedCount(), monitorStatus)
 	b.WriteString(statusBarStyle.Render(statusText))
 	b.WriteString("\n")
 
@@ -262,6 +282,9 @@ func (m Model) renderHelpBar() string {
 	case viewHelp:
 		return helpStyle.Render("按任意鍵關閉")
 	default:
+		if m.searchMode {
+			return helpStyle.Render("輸入搜尋 | Esc:清除 Enter:確認 Space:勾選")
+		}
 		return helpStyle.Render("↑↓/jk:導航 Space:勾選 Enter:啟動 /:搜尋 ?:幫助 M:Monitor Esc:清除 q:退出")
 	}
 }
