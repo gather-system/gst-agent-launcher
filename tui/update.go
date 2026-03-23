@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -218,6 +219,22 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.restoreSession(session)
 		count := m.selectedCount()
 		return m, setToast(&m, fmt.Sprintf("已恢復上次選擇 (%d)", count))
+
+	case "e":
+		path := config.ConfigPath()
+		if path != "" {
+			editor := os.Getenv("EDITOR")
+			if editor == "" {
+				editor = "notepad"
+			}
+			c := exec.Command(editor, path)
+			return m, tea.ExecProcess(c, func(err error) tea.Msg {
+				if err != nil {
+					return errMsg{err}
+				}
+				return nil
+			})
+		}
 
 	case "?":
 		m.view = viewHelp

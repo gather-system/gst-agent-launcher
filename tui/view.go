@@ -299,6 +299,7 @@ func (m Model) viewHelpOverlay() string {
 	b.WriteString("  M         單獨啟動 Monitor\n")
 	b.WriteString("  /         搜尋過濾\n")
 	b.WriteString("  P         專案快選\n")
+	b.WriteString("  e         編輯設定檔\n")
 	b.WriteString("  ?         顯示此幫助\n")
 	b.WriteString("  q         退出\n")
 	b.WriteString("\n")
