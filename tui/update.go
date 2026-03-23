@@ -71,6 +71,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateConfirm(msg)
 		case viewResult:
 			return m.updateResult(msg)
+		case viewHelp:
+			m.view = viewList
+			return m, nil
 		}
 	}
 
@@ -147,6 +150,9 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.restoreSession(session)
 		count := m.selectedCount()
 		return m, setToast(&m, fmt.Sprintf("已恢復上次選擇 (%d)", count))
+
+	case "?":
+		m.view = viewHelp
 
 	case "M":
 		if m.config != nil && m.config.Monitor.Command != "" {
