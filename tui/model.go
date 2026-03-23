@@ -151,6 +151,11 @@ type errMsg struct {
 	err error
 }
 
+// configReloadedMsg is sent when the config file has been modified and reloaded.
+type configReloadedMsg struct {
+	config *config.Config
+}
+
 // resetSelection clears all agent selections, keeping monitorOn intact.
 func (m *Model) resetSelection() {
 	m.selected = make(map[int]bool)
