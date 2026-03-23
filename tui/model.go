@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"sort"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -17,6 +18,7 @@ const (
 	viewConfirm                 // launch confirmation
 	viewResult                  // launch result
 	viewHelp                    // help overlay
+	viewProject                 // project selection
 )
 
 // groupOrder defines the display order of groups.
@@ -44,8 +46,10 @@ type Model struct {
 	err             error
 	toast           string // current toast message (empty = no toast)
 	toastTimer      int    // toast generation ID for cancelling stale timers
-	searchMode      bool   // true when in search/filter mode
-	searchQuery     string // current search query
+	searchMode      bool     // true when in search/filter mode
+	searchQuery     string   // current search query
+	projectNames    []string // sorted project names for display
+	projectCursor   int      // cursor position in project list
 }
 
 // NewModel creates a new Model with default state.
@@ -183,6 +187,43 @@ func (m *Model) restoreSession(session *config.Session) {
 		}
 	}
 	m.monitorOn = session.MonitorOn
+}
+
+// buildProjectNames extracts sorted project names from config.
+func buildProjectNames(cfg *config.Config) []string {
+	if cfg == nil || len(cfg.Projects) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(cfg.Projects))
+	for name := range cfg.Projects {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// selectProject selects agents matching the given project and returns the count.
+func (m *Model) selectProject(name string) int {
+	if m.config == nil {
+		return 0
+	}
+	proj, ok := m.config.Projects[name]
+	if !ok {
+		return 0
+	}
+	m.selected = make(map[int]bool)
+	nameSet := make(map[string]bool)
+	for _, a := range proj.Agents {
+		nameSet[a] = true
+	}
+	count := 0
+	for i, agent := range m.config.Agents {
+		if nameSet[agent.Name] {
+			m.selected[i] = true
+			count++
+		}
+	}
+	return count
 }
 
 // fuzzyMatch returns true if every character in query appears in target in order (case-insensitive).
