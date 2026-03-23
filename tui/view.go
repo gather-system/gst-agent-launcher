@@ -100,6 +100,17 @@ func (m Model) viewList() string {
 	b.WriteString(statusBarStyle.Render(statusText))
 	b.WriteString("\n")
 
+	// Agent details (path of current cursor item)
+	if m.cursor >= 0 && m.cursor < len(m.items) && !m.items[m.cursor].isGroup {
+		item := m.items[m.cursor]
+		if m.pathValid[item.index] {
+			b.WriteString(dimStyle.Render(item.agent.Path))
+		} else {
+			b.WriteString(warningStyle.Render("路徑不存在: " + item.agent.Path))
+		}
+		b.WriteString("\n")
+	}
+
 	// Help line
 	b.WriteString(m.renderHelpBar())
 	b.WriteString("\n")
