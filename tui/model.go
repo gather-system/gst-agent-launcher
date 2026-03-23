@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"strings"
+
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/gather-system/gst-agent-launcher/config"
@@ -42,6 +44,8 @@ type Model struct {
 	err             error
 	toast           string // current toast message (empty = no toast)
 	toastTimer      int    // toast generation ID for cancelling stale timers
+	searchMode      bool   // true when in search/filter mode
+	searchQuery     string // current search query
 }
 
 // NewModel creates a new Model with default state.
@@ -179,6 +183,44 @@ func (m *Model) restoreSession(session *config.Session) {
 		}
 	}
 	m.monitorOn = session.MonitorOn
+}
+
+// fuzzyMatch returns true if every character in query appears in target in order (case-insensitive).
+func fuzzyMatch(query, target string) bool {
+	query = strings.ToLower(query)
+	target = strings.ToLower(target)
+	qRunes := []rune(query)
+	qi := 0
+	for _, c := range target {
+		if qi < len(qRunes) && c == qRunes[qi] {
+			qi++
+		}
+	}
+	return qi == len(qRunes)
+}
+
+// matchesSearch returns true if the item should be visible given the current search query.
+func (m Model) matchesSearch(item listItem) bool {
+	if m.searchQuery == "" {
+		return true
+	}
+	if item.isGroup {
+		return true // groups handled separately in view
+	}
+	return fuzzyMatch(m.searchQuery, item.agent.Name)
+}
+
+// adjustCursorForSearch moves the cursor to the first matching item if the current one is hidden.
+func (m *Model) adjustCursorForSearch() {
+	if m.cursor >= 0 && m.cursor < len(m.items) && !m.items[m.cursor].isGroup && m.matchesSearch(m.items[m.cursor]) {
+		return
+	}
+	for i, item := range m.items {
+		if !item.isGroup && m.matchesSearch(item) {
+			m.cursor = i
+			return
+		}
+	}
 }
 
 // groupCount returns the number of selected and total agents in a group.
