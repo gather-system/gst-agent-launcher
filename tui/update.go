@@ -64,6 +64,38 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case tea.MouseClickMsg:
+		if m.view == viewList && msg.Button == tea.MouseLeft {
+			idx := m.itemAtY(msg.Y)
+			if idx >= 0 && !m.items[idx].isGroup {
+				now := time.Now().UnixMilli()
+				if idx == m.lastClickY && now-m.lastClickTime < 350 {
+					// Double-click: select only this agent and launch
+					m.selected = make(map[int]bool)
+					m.selected[m.items[idx].index] = true
+					m.lastClickY = -1
+					m.lastClickTime = 0
+					m.view = viewConfirm
+					return m, nil
+				}
+				m.cursor = idx
+				m.toggleCurrent()
+				m.lastClickY = idx
+				m.lastClickTime = now
+			}
+		}
+		return m, nil
+
+	case tea.MouseWheelMsg:
+		if m.view == viewList {
+			if msg.Button == tea.MouseWheelUp {
+				m.moveCursorUp()
+			} else if msg.Button == tea.MouseWheelDown {
+				m.moveCursorDown()
+			}
+		}
+		return m, nil
+
 	case tea.KeyPressMsg:
 		switch m.view {
 		case viewList:
