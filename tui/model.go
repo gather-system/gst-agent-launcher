@@ -151,6 +151,35 @@ type monitorResultMsg struct{ err error }
 // toastMsg clears the toast after timeout.
 type toastMsg struct{ id int }
 
+// selectedAgentNames returns the names of all selected agents.
+func (m Model) selectedAgentNames() []string {
+	var names []string
+	for _, item := range m.items {
+		if !item.isGroup && m.selected[item.index] {
+			names = append(names, item.agent.Name)
+		}
+	}
+	return names
+}
+
+// restoreSession applies a saved session by matching agent names.
+func (m *Model) restoreSession(session *config.Session) {
+	m.selected = make(map[int]bool)
+	if m.config == nil {
+		return
+	}
+	nameSet := make(map[string]bool)
+	for _, name := range session.Agents {
+		nameSet[name] = true
+	}
+	for i, agent := range m.config.Agents {
+		if nameSet[agent.Name] {
+			m.selected[i] = true
+		}
+	}
+	m.monitorOn = session.MonitorOn
+}
+
 // groupCount returns the number of selected and total agents in a group.
 func (m Model) groupCount(group string) (selected, total int) {
 	if m.config == nil {
