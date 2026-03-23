@@ -56,8 +56,9 @@ func (m Model) viewList() string {
 	// Render list items
 	for i, item := range m.items {
 		if item.isGroup {
+			sel, tot := m.groupCount(item.group)
 			style := groupStyle(item.group)
-			b.WriteString(style.Render(fmt.Sprintf("── %s ──", item.group)))
+			b.WriteString(style.Render(fmt.Sprintf("── %s (%d/%d) ──", item.group, sel, tot)))
 			b.WriteString("\n")
 			continue
 		}
