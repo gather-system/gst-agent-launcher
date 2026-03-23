@@ -25,7 +25,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.pathValid[i] = err == nil
 		}
 		m.projectNames = buildProjectNames(m.config)
-		return m, nil
+		// Start config file watcher.
+		return m, startConfigWatcher()
+
+	case configReloadedMsg:
+		// Preserve current selection by name.
+		selectedNames := m.selectedAgentNames()
+		m.config = msg.config
+		m.items = buildItems(m.config)
+		m.pathValid = make(map[int]bool)
+		for i, agent := range m.config.Agents {
+			_, err := os.Stat(agent.Path)
+			m.pathValid[i] = err == nil
+		}
+		m.projectNames = buildProjectNames(m.config)
+		// Restore selection by name matching.
+		m.selected = make(map[int]bool)
+		nameSet := make(map[string]bool)
+		for _, n := range selectedNames {
+			nameSet[n] = true
+		}
+		for i, agent := range m.config.Agents {
+			if nameSet[agent.Name] {
+				m.selected[i] = true
+			}
+		}
+		// Adjust cursor.
+		if m.cursor >= len(m.items) {
+			m.cursor = firstSelectableIndex(m.items)
+		}
+		return m, tea.Batch(setToast(&m, "設定檔已重新載入"), waitForConfigReload())
 
 	case errMsg:
 		m.err = msg.err
@@ -266,6 +295,34 @@ func (m Model) updateProject(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 	return m, nil
+}
+
+// configWatchCh holds the channel from the config file watcher.
+var configWatchCh <-chan *config.Config
+
+// startConfigWatcher starts watching the config file and returns a command to wait for the first reload.
+func startConfigWatcher() tea.Cmd {
+	path := config.ConfigPath()
+	if path == "" {
+		return nil
+	}
+	ch, err := config.WatchConfig(path)
+	if err != nil {
+		return nil
+	}
+	configWatchCh = ch
+	return waitForConfigReload()
+}
+
+// waitForConfigReload returns a command that waits for the next config reload event.
+func waitForConfigReload() tea.Cmd {
+	if configWatchCh == nil {
+		return nil
+	}
+	return func() tea.Msg {
+		cfg := <-configWatchCh
+		return configReloadedMsg{cfg}
+	}
 }
 
 // setToast sets a toast message and returns a command to clear it after 2 seconds.
