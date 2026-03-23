@@ -74,7 +74,14 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		if m.selectedCount() > 0 || m.monitorOn {
 			m.view = viewConfirm
+		} else {
+			return m, setToast(&m, "請先選擇至少一個 Agent")
 		}
+
+	case "escape":
+		m.resetSelection()
+		m.monitorOn = false
+		return m, setToast(&m, "已清除所有選擇")
 
 	case "a":
 		m.toggleAll()
