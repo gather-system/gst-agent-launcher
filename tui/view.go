@@ -86,7 +86,7 @@ func (m Model) viewList() string {
 	b.WriteString("\n")
 
 	// Help line
-	b.WriteString(helpStyle.Render("↑↓/jk:導航 Space:勾選 a:全選 c:Core p:PM o:App l:Leyu m:Monitor"))
+	b.WriteString(m.renderHelpBar())
 	b.WriteString("\n")
 
 	return b.String()
@@ -118,7 +118,7 @@ func (m Model) viewConfirm() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(confirmStyle.Render("按 y 確認啟動 / n 返回選單"))
+	b.WriteString(m.renderHelpBar())
 	b.WriteString("\n")
 
 	return b.String()
@@ -154,8 +154,20 @@ func (m Model) viewResult() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(dimStyle.Render("2 秒後自動退出..."))
+	b.WriteString(m.renderHelpBar())
 	b.WriteString("\n")
 
 	return b.String()
+}
+
+// renderHelpBar returns the help bar text for the current view state.
+func (m Model) renderHelpBar() string {
+	switch m.view {
+	case viewConfirm:
+		return helpStyle.Render("y:確認 n:取消")
+	case viewResult:
+		return helpStyle.Render("任意鍵:返回選單 q:退出")
+	default:
+		return helpStyle.Render("↑↓/jk:導航 Space:勾選 Enter:啟動 M:Monitor Esc:清除 q:退出")
+	}
 }
