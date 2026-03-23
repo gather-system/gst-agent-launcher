@@ -138,3 +138,19 @@ type errMsg struct {
 
 // autoQuitMsg triggers automatic exit after launch.
 type autoQuitMsg struct{}
+
+// groupSelectedCount returns the number of selected and total agents in a group.
+func (m Model) groupSelectedCount(group string) (selected, total int) {
+	if m.config == nil {
+		return 0, 0
+	}
+	for i, agent := range m.config.Agents {
+		if agent.Group == group {
+			total++
+			if m.selected[i] {
+				selected++
+			}
+		}
+	}
+	return
+}
