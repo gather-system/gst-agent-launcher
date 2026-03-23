@@ -26,6 +26,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case launchResultMsg:
 		m.result = msg.result
 		m.view = viewResult
+		for _, name := range msg.result.Launched {
+			if name == "Monitor" {
+				m.monitorLaunched = true
+				break
+			}
+		}
 		return m, func() tea.Msg {
 			time.Sleep(2 * time.Second)
 			return autoQuitMsg{}
@@ -38,6 +44,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case autoQuitMsg:
 		return m, tea.Quit
+
+	case monitorResultMsg:
+		if msg.err != nil {
+			m.err = msg.err
+		} else {
+			m.monitorLaunched = true
+			m.toast = "Monitor 已啟動"
+			m.toastTimer++
+			id := m.toastTimer
+			return m, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+				return toastMsg{id}
+			})
+		}
+		return m, nil
+
+	case toastMsg:
+		if msg.id == m.toastTimer {
+			m.toast = ""
+		}
+		return m, nil
 
 	case tea.KeyPressMsg:
 		switch m.view {
@@ -90,6 +116,11 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	case "m":
 		m.monitorOn = !m.monitorOn
+
+	case "M":
+		if m.config != nil && m.config.Monitor.Command != "" {
+			return m, m.doLaunchMonitorOnly()
+		}
 	}
 
 	return m, nil
@@ -110,7 +141,8 @@ func (m Model) updateConfirm(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) doLaunch() tea.Cmd {
 	agents := m.selectedAgents()
 	var monitor *config.Monitor
-	if m.monitorOn && m.config != nil {
+	// Skip monitor if already launched to avoid duplicate tabs.
+	if m.monitorOn && !m.monitorLaunched && m.config != nil {
 		monitor = &m.config.Monitor
 	}
 
@@ -120,6 +152,15 @@ func (m Model) doLaunch() tea.Cmd {
 			return launchErrMsg{err}
 		}
 		return launchResultMsg{result}
+	}
+}
+
+// doLaunchMonitorOnly launches only the monitor tab.
+func (m Model) doLaunchMonitorOnly() tea.Cmd {
+	monitor := m.config.Monitor
+	return func() tea.Msg {
+		err := launcher.LaunchMonitor(monitor)
+		return monitorResultMsg{err}
 	}
 }
 

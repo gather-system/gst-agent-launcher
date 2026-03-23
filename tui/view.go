@@ -47,6 +47,12 @@ func (m Model) viewList() string {
 		return b.String()
 	}
 
+	// Monitor status
+	if m.monitorLaunched {
+		b.WriteString(successStyle.Render("Monitor [R]"))
+		b.WriteString("\n\n")
+	}
+
 	// Render list items
 	for i, item := range m.items {
 		if item.isGroup {
@@ -72,6 +78,12 @@ func (m Model) viewList() string {
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s %s\n", cursor, check, name))
+	}
+
+	// Toast
+	if m.toast != "" {
+		b.WriteString(toastStyle.Render(m.toast))
+		b.WriteString("\n")
 	}
 
 	// Status bar
@@ -108,8 +120,14 @@ func (m Model) viewConfirm() string {
 	b.WriteString(fmt.Sprintf("即將開啟 %d 個 tab：\n\n", total))
 
 	if m.monitorOn && m.config != nil {
-		b.WriteString(fmt.Sprintf("  %s Monitor (%s)\n",
-			selectedStyle.Render("●"), m.config.Monitor.Command))
+		if m.monitorLaunched {
+			b.WriteString(fmt.Sprintf("  %s Monitor (%s) %s\n",
+				dimStyle.Render("●"), m.config.Monitor.Command,
+				dimStyle.Render("— 已在運行，將跳過")))
+		} else {
+			b.WriteString(fmt.Sprintf("  %s Monitor (%s)\n",
+				selectedStyle.Render("●"), m.config.Monitor.Command))
+		}
 	}
 
 	for _, agent := range agents {

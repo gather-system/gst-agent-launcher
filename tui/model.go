@@ -29,14 +29,17 @@ type listItem struct {
 
 // Model is the Bubble Tea model for the launcher TUI.
 type Model struct {
-	config    *config.Config
-	items     []listItem    // flat list of group headers + agents
-	cursor    int           // current cursor position in items
-	selected  map[int]bool  // keyed by agent index in config.Agents
-	monitorOn bool          // monitor toggle
-	view      viewState     // current screen
-	result    *launcher.LaunchResult
-	err       error
+	config           *config.Config
+	items            []listItem    // flat list of group headers + agents
+	cursor           int           // current cursor position in items
+	selected         map[int]bool  // keyed by agent index in config.Agents
+	monitorOn        bool          // monitor toggle
+	monitorLaunched  bool          // true after Monitor has been launched
+	view             viewState     // current screen
+	result           *launcher.LaunchResult
+	err              error
+	toast            string // current toast message (empty = no toast)
+	toastTimer       int    // toast generation ID for cancelling stale timers
 }
 
 // NewModel creates a new Model with default state.
@@ -138,3 +141,9 @@ type errMsg struct {
 
 // autoQuitMsg triggers automatic exit after launch.
 type autoQuitMsg struct{}
+
+// monitorResultMsg is sent when the monitor-only launch completes.
+type monitorResultMsg struct{ err error }
+
+// toastMsg clears the toast after timeout.
+type toastMsg struct{ id int }

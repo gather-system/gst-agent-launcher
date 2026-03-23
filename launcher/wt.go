@@ -74,6 +74,25 @@ func LaunchAll(agents []config.Agent, monitor *config.Monitor) (*LaunchResult, e
 	return result, nil
 }
 
+// LaunchMonitor opens only the monitor tab in Windows Terminal.
+func LaunchMonitor(monitor config.Monitor) error {
+	wtPath, err := findWT()
+	if err != nil {
+		return err
+	}
+
+	parts := strings.Fields(monitor.Command)
+	args := []string{"-w", "0", "new-tab", "--title", "Monitor", "pwsh", "-NoExit", "-Command"}
+	args = append(args, parts...)
+
+	cmd := exec.Command(wtPath, args...)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start wt.exe: %w", err)
+	}
+	go cmd.Wait()
+	return nil
+}
+
 // findWT locates wt.exe, checking the standard WindowsApps path first,
 // then falling back to PATH lookup.
 func findWT() (string, error) {
