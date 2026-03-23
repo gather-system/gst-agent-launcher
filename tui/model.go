@@ -50,6 +50,8 @@ type Model struct {
 	searchQuery     string   // current search query
 	projectNames    []string // sorted project names for display
 	projectCursor   int      // cursor position in project list
+	lastClickY      int      // last mouse click Y for double-click detection
+	lastClickTime   int64    // last mouse click time (UnixMilli) for double-click
 }
 
 // NewModel creates a new Model with default state.
@@ -187,6 +189,37 @@ func (m *Model) restoreSession(session *config.Session) {
 		}
 	}
 	m.monitorOn = session.MonitorOn
+}
+
+// itemAtY returns the items index for a given screen Y coordinate in viewList, or -1.
+func (m Model) itemAtY(y int) int {
+	row := 2 // title + blank line
+	if m.monitorLaunched {
+		row += 2 // Monitor [R] + blank line
+	}
+	for i, item := range m.items {
+		if item.isGroup {
+			if m.searchQuery != "" {
+				hasMatch := false
+				for j := i + 1; j < len(m.items) && !m.items[j].isGroup; j++ {
+					if m.matchesSearch(m.items[j]) {
+						hasMatch = true
+						break
+					}
+				}
+				if !hasMatch {
+					continue
+				}
+			}
+		} else if !m.matchesSearch(item) {
+			continue
+		}
+		if row == y {
+			return i
+		}
+		row++
+	}
+	return -1
 }
 
 // buildProjectNames extracts sorted project names from config.

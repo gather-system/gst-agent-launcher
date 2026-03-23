@@ -9,18 +9,22 @@ import (
 
 // View renders the TUI.
 func (m Model) View() tea.View {
+	var content string
 	switch m.view {
 	case viewConfirm:
-		return tea.NewView(m.viewConfirm())
+		content = m.viewConfirm()
 	case viewResult:
-		return tea.NewView(m.viewResult())
+		content = m.viewResult()
 	case viewHelp:
-		return tea.NewView(m.viewHelpOverlay())
+		content = m.viewHelpOverlay()
 	case viewProject:
-		return tea.NewView(m.viewProjectSelect())
+		content = m.viewProjectSelect()
 	default:
-		return tea.NewView(m.viewList())
+		content = m.viewList()
 	}
+	v := tea.NewView(content)
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 // viewList renders the agent selection list.
