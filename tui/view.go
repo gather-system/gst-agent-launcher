@@ -74,6 +74,12 @@ func (m Model) viewList() string {
 		b.WriteString(fmt.Sprintf("%s%s %s\n", cursor, check, name))
 	}
 
+	// Toast
+	if m.toast != "" {
+		b.WriteString(toastStyle.Render(m.toast))
+		b.WriteString("\n")
+	}
+
 	// Status bar
 	b.WriteString("\n")
 	monitorStatus := "OFF"

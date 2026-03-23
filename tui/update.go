@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -39,6 +40,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case autoQuitMsg:
 		return m, tea.Quit
 
+	case toastMsg:
+		if msg.id == m.toastTimer {
+			m.toast = ""
+		}
+		return m, nil
+
 	case tea.KeyPressMsg:
 		switch m.view {
 		case viewList:
@@ -55,6 +62,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // updateList handles key presses in the list view.
 func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return m, tea.Quit
@@ -75,24 +84,58 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	case "a":
 		m.toggleAll()
+		count := m.selectedCount()
+		if count > 0 {
+			cmd = setToast(&m, fmt.Sprintf("已勾選全部 (%d)", count))
+		} else {
+			cmd = setToast(&m, "已取消全部勾選")
+		}
 
 	case "c":
 		m.toggleGroup("Core")
+		cmd = groupToast(&m, "Core")
 
 	case "p":
 		m.toggleGroup("PM")
+		cmd = groupToast(&m, "PM")
 
 	case "o":
 		m.toggleGroup("App")
+		cmd = groupToast(&m, "App")
 
 	case "l":
 		m.toggleGroup("Leyu")
+		cmd = groupToast(&m, "Leyu")
 
 	case "m":
 		m.monitorOn = !m.monitorOn
+		if m.monitorOn {
+			cmd = setToast(&m, "Monitor: ON")
+		} else {
+			cmd = setToast(&m, "Monitor: OFF")
+		}
 	}
 
-	return m, nil
+	return m, cmd
+}
+
+// setToast sets a toast message and returns a command to clear it after 2 seconds.
+func setToast(m *Model, msg string) tea.Cmd {
+	m.toastTimer++
+	m.toast = msg
+	id := m.toastTimer
+	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+		return toastMsg{id}
+	})
+}
+
+// groupToast generates a toast message for a group toggle.
+func groupToast(m *Model, group string) tea.Cmd {
+	sel, total := m.groupCount(group)
+	if sel > 0 {
+		return setToast(m, fmt.Sprintf("已勾選 %s 群組 (%d/%d)", group, sel, total))
+	}
+	return setToast(m, fmt.Sprintf("已取消 %s 群組", group))
 }
 
 // updateConfirm handles key presses in the confirm view.
