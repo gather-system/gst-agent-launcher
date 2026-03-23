@@ -14,6 +14,7 @@ const (
 	viewList    viewState = iota // agent selection list
 	viewConfirm                 // launch confirmation
 	viewResult                  // launch result
+	viewHelp                    // help overlay
 )
 
 // groupOrder defines the display order of groups.

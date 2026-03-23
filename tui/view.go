@@ -14,6 +14,8 @@ func (m Model) View() tea.View {
 		return tea.NewView(m.viewConfirm())
 	case viewResult:
 		return tea.NewView(m.viewResult())
+	case viewHelp:
+		return tea.NewView(m.viewHelpOverlay())
 	default:
 		return tea.NewView(m.viewList())
 	}
@@ -205,6 +207,51 @@ func (m Model) viewResult() string {
 	return b.String()
 }
 
+// viewHelpOverlay renders the help overlay screen.
+func (m Model) viewHelpOverlay() string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("GST Agent Launcher — 快捷鍵"))
+	b.WriteString("\n\n")
+
+	b.WriteString(confirmStyle.Render("導航"))
+	b.WriteString("\n")
+	b.WriteString("  ↑/k       上移\n")
+	b.WriteString("  ↓/j       下移\n")
+	b.WriteString("\n")
+
+	b.WriteString(confirmStyle.Render("選取"))
+	b.WriteString("\n")
+	b.WriteString("  Space     勾選/取消\n")
+	b.WriteString("  a         全選/全取消\n")
+	b.WriteString("  Esc       清除所有選擇\n")
+	b.WriteString("  r         恢復上次選擇\n")
+	b.WriteString("\n")
+
+	b.WriteString(confirmStyle.Render("群組快選"))
+	b.WriteString("\n")
+	b.WriteString("  c         Core 群組\n")
+	b.WriteString("  p         PM 群組\n")
+	b.WriteString("  o         App 群組\n")
+	b.WriteString("  l         Leyu 群組\n")
+	b.WriteString("\n")
+
+	b.WriteString(confirmStyle.Render("功能"))
+	b.WriteString("\n")
+	b.WriteString("  Enter     啟動選取的 Agent\n")
+	b.WriteString("  m         切換 Monitor\n")
+	b.WriteString("  M         單獨啟動 Monitor\n")
+	b.WriteString("  /         搜尋過濾\n")
+	b.WriteString("  ?         顯示此幫助\n")
+	b.WriteString("  q         退出\n")
+	b.WriteString("\n")
+
+	b.WriteString(m.renderHelpBar())
+	b.WriteString("\n")
+
+	return b.String()
+}
+
 // renderHelpBar returns the help bar text for the current view state.
 func (m Model) renderHelpBar() string {
 	switch m.view {
@@ -212,7 +259,9 @@ func (m Model) renderHelpBar() string {
 		return helpStyle.Render("y:確認 n:取消")
 	case viewResult:
 		return helpStyle.Render("任意鍵:返回選單 q:退出")
+	case viewHelp:
+		return helpStyle.Render("按任意鍵關閉")
 	default:
-		return helpStyle.Render("↑↓/jk:導航 Space:勾選 Enter:啟動 M:Monitor Esc:清除 q:退出")
+		return helpStyle.Render("↑↓/jk:導航 Space:勾選 Enter:啟動 /:搜尋 ?:幫助 M:Monitor Esc:清除 q:退出")
 	}
 }
