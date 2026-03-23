@@ -47,11 +47,18 @@ func (m Model) viewList() string {
 		return b.String()
 	}
 
+	// Monitor status
+	if m.monitorLaunched {
+		b.WriteString(successStyle.Render("Monitor [R]"))
+		b.WriteString("\n\n")
+	}
+
 	// Render list items
 	for i, item := range m.items {
 		if item.isGroup {
+			sel, tot := m.groupCount(item.group)
 			style := groupStyle(item.group)
-			b.WriteString(style.Render(fmt.Sprintf("── %s ──", item.group)))
+			b.WriteString(style.Render(fmt.Sprintf("── %s (%d/%d) ──", item.group, sel, tot)))
 			b.WriteString("\n")
 			continue
 		}
@@ -67,11 +74,19 @@ func (m Model) viewList() string {
 		}
 
 		name := item.agent.Name
-		if i == m.cursor {
+		if !m.pathValid[item.index] {
+			name = invalidStyle.Render(name + " [!]")
+		} else if i == m.cursor {
 			name = cursorStyle.Render(name)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s %s\n", cursor, check, name))
+	}
+
+	// Toast
+	if m.toast != "" {
+		b.WriteString(toastStyle.Render(m.toast))
+		b.WriteString("\n")
 	}
 
 	// Status bar
@@ -86,7 +101,7 @@ func (m Model) viewList() string {
 	b.WriteString("\n")
 
 	// Help line
-	b.WriteString(helpStyle.Render("↑↓/jk:導航 Space:勾選 a:全選 c:Core p:PM o:App l:Leyu m:Monitor"))
+	b.WriteString(m.renderHelpBar())
 	b.WriteString("\n")
 
 	return b.String()
@@ -108,17 +123,36 @@ func (m Model) viewConfirm() string {
 	b.WriteString(fmt.Sprintf("即將開啟 %d 個 tab：\n\n", total))
 
 	if m.monitorOn && m.config != nil {
-		b.WriteString(fmt.Sprintf("  %s Monitor (%s)\n",
-			selectedStyle.Render("●"), m.config.Monitor.Command))
+		if m.monitorLaunched {
+			b.WriteString(fmt.Sprintf("  %s Monitor (%s) %s\n",
+				dimStyle.Render("●"), m.config.Monitor.Command,
+				dimStyle.Render("— 已在運行，將跳過")))
+		} else {
+			b.WriteString(fmt.Sprintf("  %s Monitor (%s)\n",
+				selectedStyle.Render("●"), m.config.Monitor.Command))
+		}
 	}
 
 	for _, agent := range agents {
-		b.WriteString(fmt.Sprintf("  %s %s [%s]\n",
-			selectedStyle.Render("●"), agent.Name, agent.Group))
+		valid := true
+		for i, a := range m.config.Agents {
+			if a.Name == agent.Name && !m.pathValid[i] {
+				valid = false
+				break
+			}
+		}
+		if !valid {
+			b.WriteString(fmt.Sprintf("  %s %s [%s] %s\n",
+				dimStyle.Render("●"), invalidStyle.Render(agent.Name), agent.Group,
+				warningStyle.Render("(路徑不存在，將跳過)")))
+		} else {
+			b.WriteString(fmt.Sprintf("  %s %s [%s]\n",
+				selectedStyle.Render("●"), agent.Name, agent.Group))
+		}
 	}
 
 	b.WriteString("\n")
-	b.WriteString(confirmStyle.Render("按 y 確認啟動 / n 返回選單"))
+	b.WriteString(m.renderHelpBar())
 	b.WriteString("\n")
 
 	return b.String()
@@ -154,8 +188,20 @@ func (m Model) viewResult() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(helpStyle.Render("按任意鍵返回選單 / q 退出"))
+	b.WriteString(m.renderHelpBar())
 	b.WriteString("\n")
 
 	return b.String()
+}
+
+// renderHelpBar returns the help bar text for the current view state.
+func (m Model) renderHelpBar() string {
+	switch m.view {
+	case viewConfirm:
+		return helpStyle.Render("y:確認 n:取消")
+	case viewResult:
+		return helpStyle.Render("任意鍵:返回選單 q:退出")
+	default:
+		return helpStyle.Render("↑↓/jk:導航 Space:勾選 Enter:啟動 M:Monitor Esc:清除 q:退出")
+	}
 }

@@ -1,6 +1,10 @@
 package tui
 
 import (
+	"fmt"
+	"os"
+	"time"
+
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/gather-system/gst-agent-launcher/config"
@@ -15,6 +19,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.items = buildItems(m.config)
 		m.cursor = firstSelectableIndex(m.items)
 		m.monitorOn = m.config.Monitor.Enabled
+		m.pathValid = make(map[int]bool)
+		for i, agent := range m.config.Agents {
+			_, err := os.Stat(agent.Path)
+			m.pathValid[i] = err == nil
+		}
 		return m, nil
 
 	case errMsg:
@@ -24,11 +33,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case launchResultMsg:
 		m.result = msg.result
 		m.view = viewResult
+		for _, name := range msg.result.Launched {
+			if name == "Monitor" {
+				m.monitorLaunched = true
+				break
+			}
+		}
 		return m, nil
 
 	case launchErrMsg:
 		m.err = msg.err
 		m.view = viewList
+		return m, nil
+
+	case toastMsg:
+		if msg.id == m.toastTimer {
+			m.toast = ""
+		}
+		return m, nil
+
+	case monitorResultMsg:
+		if msg.err != nil {
+			m.err = msg.err
+		} else {
+			m.monitorLaunched = true
+			return m, setToast(&m, "Monitor 已啟動")
+		}
 		return m, nil
 
 	case tea.KeyPressMsg:
@@ -47,6 +77,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // updateList handles key presses in the list view.
 func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return m, tea.Quit
@@ -63,28 +95,74 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		if m.selectedCount() > 0 || m.monitorOn {
 			m.view = viewConfirm
+		} else {
+			return m, setToast(&m, "請先選擇至少一個 Agent")
 		}
+
+	case "escape":
+		m.resetSelection()
+		m.monitorOn = false
+		return m, setToast(&m, "已清除所有選擇")
 
 	case "a":
 		m.toggleAll()
+		count := m.selectedCount()
+		if count > 0 {
+			cmd = setToast(&m, fmt.Sprintf("已勾選全部 (%d)", count))
+		} else {
+			cmd = setToast(&m, "已取消全部勾選")
+		}
 
 	case "c":
 		m.toggleGroup("Core")
+		cmd = groupToast(&m, "Core")
 
 	case "p":
 		m.toggleGroup("PM")
+		cmd = groupToast(&m, "PM")
 
 	case "o":
 		m.toggleGroup("App")
+		cmd = groupToast(&m, "App")
 
 	case "l":
 		m.toggleGroup("Leyu")
+		cmd = groupToast(&m, "Leyu")
 
 	case "m":
 		m.monitorOn = !m.monitorOn
+		if m.monitorOn {
+			cmd = setToast(&m, "Monitor: ON")
+		} else {
+			cmd = setToast(&m, "Monitor: OFF")
+		}
+
+	case "M":
+		if m.config != nil && m.config.Monitor.Command != "" {
+			return m, m.doLaunchMonitorOnly()
+		}
 	}
 
-	return m, nil
+	return m, cmd
+}
+
+// setToast sets a toast message and returns a command to clear it after 2 seconds.
+func setToast(m *Model, msg string) tea.Cmd {
+	m.toastTimer++
+	m.toast = msg
+	id := m.toastTimer
+	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+		return toastMsg{id}
+	})
+}
+
+// groupToast generates a toast message for a group toggle.
+func groupToast(m *Model, group string) tea.Cmd {
+	sel, total := m.groupCount(group)
+	if sel > 0 {
+		return setToast(m, fmt.Sprintf("已勾選 %s 群組 (%d/%d)", group, sel, total))
+	}
+	return setToast(m, fmt.Sprintf("已取消 %s 群組", group))
 }
 
 // updateResult handles key presses in the result view.
@@ -114,7 +192,8 @@ func (m Model) updateConfirm(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) doLaunch() tea.Cmd {
 	agents := m.selectedAgents()
 	var monitor *config.Monitor
-	if m.monitorOn && m.config != nil {
+	// Skip monitor if already launched to avoid duplicate tabs.
+	if m.monitorOn && !m.monitorLaunched && m.config != nil {
 		monitor = &m.config.Monitor
 	}
 
@@ -124,6 +203,15 @@ func (m Model) doLaunch() tea.Cmd {
 			return launchErrMsg{err}
 		}
 		return launchResultMsg{result}
+	}
+}
+
+// doLaunchMonitorOnly launches only the monitor tab.
+func (m Model) doLaunchMonitorOnly() tea.Cmd {
+	monitor := m.config.Monitor
+	return func() tea.Msg {
+		err := launcher.LaunchMonitor(monitor)
+		return monitorResultMsg{err}
 	}
 }
 
