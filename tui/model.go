@@ -39,6 +39,7 @@ type Model struct {
 	cursor          int           // current cursor position in items
 	selected        map[int]bool  // keyed by agent index in config.Agents
 	pathValid       map[int]bool  // keyed by agent index, true if path exists
+	runningAgents   map[int]bool  // keyed by agent index, true if process detected
 	monitorOn       bool          // monitor toggle
 	monitorLaunched bool          // true after Monitor has been launched
 	view            viewState     // current screen

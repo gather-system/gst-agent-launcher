@@ -35,3 +35,9 @@ type monitorResultMsg struct{ err error }
 
 // toastMsg clears the toast after timeout.
 type toastMsg struct{ id int }
+
+// processScanMsg is sent when process detection completes.
+type processScanMsg struct {
+	running map[int]bool // keyed by agent index
+	err     error
+}

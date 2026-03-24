@@ -25,8 +25,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.pathValid[i] = err == nil
 		}
 		m.projectNames = buildProjectNames(m.config)
-		// Start config file watcher.
-		return m, startConfigWatcher()
+		m.runningAgents = make(map[int]bool)
+		// Start config file watcher and process scan.
+		agentNames := make([]string, len(m.config.Agents))
+		for i, a := range m.config.Agents {
+			agentNames[i] = a.Name
+		}
+		return m, tea.Batch(startConfigWatcher(), processScanCmd(agentNames))
 
 	case configReloadedMsg:
 		// Preserve current selection by name.
@@ -55,6 +60,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursor = firstSelectableIndex(m.items)
 		}
 		return m, tea.Batch(setToast(&m, "設定檔已重新載入"), waitForConfigReload())
+
+	case processScanMsg:
+		if msg.err != nil {
+			return m, setToast(&m, "Process 掃描不可用")
+		}
+		m.runningAgents = msg.running
+		return m, nil
 
 	case errMsg:
 		m.err = msg.err

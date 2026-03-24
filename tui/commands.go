@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 
 	"github.com/gather-system/gst-agent-launcher/config"
 	"github.com/gather-system/gst-agent-launcher/launcher"
+	"github.com/gather-system/gst-agent-launcher/process"
 )
 
 // configWatchCh holds the channel from the config file watcher.
@@ -55,6 +57,19 @@ func groupToast(m *Model, group string) tea.Cmd {
 		return setToast(m, fmt.Sprintf("已勾選 %s 群組 (%d/%d)", group, sel, total))
 	}
 	return setToast(m, fmt.Sprintf("已取消 %s 群組", group))
+}
+
+// processScanCmd scans for running agent processes asynchronously.
+func processScanCmd(agentNames []string) tea.Cmd {
+	return func() tea.Msg {
+		scanner := process.NewScanner()
+		procs, err := scanner.ScanRunning(context.Background())
+		if err != nil {
+			return processScanMsg{err: err}
+		}
+		running := process.MatchAgentNames(procs, agentNames)
+		return processScanMsg{running: running}
+	}
 }
 
 // doLaunch creates a command that performs the actual launch.

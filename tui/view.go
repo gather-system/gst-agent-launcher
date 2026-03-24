@@ -102,6 +102,9 @@ func (m Model) viewList() string {
 		} else if i == m.cursor {
 			name = cursorStyle.Render(name)
 		}
+		if m.runningAgents[item.index] {
+			name += " " + successStyle.Render("[R]")
+		}
 
 		b.WriteString(fmt.Sprintf("%s%s %s\n", cursor, check, name))
 	}
@@ -174,9 +177,15 @@ func (m Model) viewConfirm() string {
 
 	for _, agent := range agents {
 		valid := true
+		running := false
 		for i, a := range m.config.Agents {
-			if a.Name == agent.Name && !m.pathValid[i] {
-				valid = false
+			if a.Name == agent.Name {
+				if !m.pathValid[i] {
+					valid = false
+				}
+				if m.runningAgents[i] {
+					running = true
+				}
 				break
 			}
 		}
@@ -184,6 +193,10 @@ func (m Model) viewConfirm() string {
 			b.WriteString(fmt.Sprintf("  %s %s [%s] %s\n",
 				dimStyle.Render("●"), invalidStyle.Render(agent.Name), agent.Group,
 				warningStyle.Render("(路徑不存在，將跳過)")))
+		} else if running {
+			b.WriteString(fmt.Sprintf("  %s %s [%s] %s\n",
+				selectedStyle.Render("●"), agent.Name, agent.Group,
+				warningStyle.Render("(已在運行，將重新開啟)")))
 		} else {
 			b.WriteString(fmt.Sprintf("  %s %s [%s]\n",
 				selectedStyle.Render("●"), agent.Name, agent.Group))
