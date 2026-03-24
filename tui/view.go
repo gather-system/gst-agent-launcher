@@ -360,8 +360,8 @@ func (m Model) viewDashboard() string {
 	}
 
 	// Table header.
-	header := fmt.Sprintf("  %-20s %-6s %-8s %-30s %-6s %-8s",
-		"Name", "Group", "Status", "Branch", "Dirty", "Health")
+	header := fmt.Sprintf("  %-20s %-6s %-8s %-30s %-6s %-4s %-8s",
+		"Name", "Group", "Status", "Branch", "Dirty", "PR", "Health")
 	b.WriteString(dashHeaderStyle.Render(header))
 	b.WriteString("\n")
 
@@ -397,9 +397,14 @@ func (m Model) viewDashboard() string {
 			}
 		}
 
+		prStr := ""
+		if gs, ok := m.gitStatuses[i]; ok && gs.HasOpenPR {
+			prStr = successStyle.Render("✓")
+		}
+
 		style := groupStyle(agent.Group)
-		row := fmt.Sprintf("  %-20s %-6s %-8s %-30s %-6s %-8s",
-			agent.Name, style.Render(agent.Group), status, branch, dirty, healthStr)
+		row := fmt.Sprintf("  %-20s %-6s %-8s %-30s %-6s %-4s %-8s",
+			agent.Name, style.Render(agent.Group), status, branch, dirty, prStr, healthStr)
 
 		if i%2 == 0 {
 			b.WriteString(row)

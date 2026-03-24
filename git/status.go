@@ -20,7 +20,7 @@ type RepoStatus struct {
 }
 
 // GetStatus returns the git status for a single repository.
-func GetStatus(ctx context.Context, runner Runner, index int, path string) RepoStatus {
+func GetStatus(ctx context.Context, runner Runner, ghRunner GhRunner, index int, path string) RepoStatus {
 	result := RepoStatus{AgentIndex: index}
 
 	checkCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -35,24 +35,31 @@ func GetStatus(ctx context.Context, runner Runner, index int, path string) RepoS
 	result.Branch = branch
 	result.IssueID = ExtractIssueID(branch)
 
-	// Get dirty count.
+	// Start PR check concurrently (uses its own 5s timeout).
+	var prWg sync.WaitGroup
+	prWg.Add(1)
+	go func() {
+		defer prWg.Done()
+		result.HasOpenPR = CheckOpenPR(ctx, ghRunner, path, branch)
+	}()
+
+	// Get dirty count (concurrent with PR check).
 	porcelain, err := runner.Run(checkCtx, path, "status", "--porcelain")
 	if err != nil {
 		result.Error = err
+		prWg.Wait()
 		return result
 	}
 	if porcelain != "" {
 		result.DirtyCount = len(strings.Split(porcelain, "\n"))
 	}
 
-	// Check for open PR (independent, uses its own timeout).
-	result.HasOpenPR = CheckOpenPR(ctx, path, branch)
-
+	prWg.Wait()
 	return result
 }
 
 // GetAllStatuses returns git status for all agents with valid git repos, in parallel.
-func GetAllStatuses(ctx context.Context, runner Runner, agents []config.Agent, isGitRepo func(int) bool) []RepoStatus {
+func GetAllStatuses(ctx context.Context, runner Runner, ghRunner GhRunner, agents []config.Agent, isGitRepo func(int) bool) []RepoStatus {
 	var results []RepoStatus
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -64,7 +71,7 @@ func GetAllStatuses(ctx context.Context, runner Runner, agents []config.Agent, i
 		wg.Add(1)
 		go func(idx int, path string) {
 			defer wg.Done()
-			status := GetStatus(ctx, runner, idx, path)
+			status := GetStatus(ctx, runner, ghRunner, idx, path)
 			mu.Lock()
 			results = append(results, status)
 			mu.Unlock()

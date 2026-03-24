@@ -74,8 +74,9 @@ func healthCheckCmd(agents []config.Agent) tea.Cmd {
 func gitStatusCmd(agents []config.Agent, pathValid map[int]bool) tea.Cmd {
 	return func() tea.Msg {
 		runner := gitpkg.NewRunner()
+		ghRunner := gitpkg.NewGhRunner()
 		isGitRepo := func(i int) bool { return pathValid[i] }
-		statuses := gitpkg.GetAllStatuses(context.Background(), runner, agents, isGitRepo)
+		statuses := gitpkg.GetAllStatuses(context.Background(), runner, ghRunner, agents, isGitRepo)
 		return gitStatusMsg{statuses: statuses}
 	}
 }

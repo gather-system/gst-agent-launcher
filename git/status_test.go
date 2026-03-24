@@ -36,7 +36,7 @@ func TestGetStatus_CleanRepo(t *testing.T) {
 		"/repo:status:--porcelain":     {output: ""},
 	}}
 
-	s := GetStatus(context.Background(), runner, 0, "/repo")
+	s := GetStatus(context.Background(), runner, &mockGhRunner{}, 0, "/repo")
 	if s.Error != nil {
 		t.Fatalf("unexpected error: %v", s.Error)
 	}
@@ -57,7 +57,7 @@ func TestGetStatus_DirtyRepo(t *testing.T) {
 		"/repo:status:--porcelain":     {output: " M file1.go\n M file2.go\n?? file3.go"},
 	}}
 
-	s := GetStatus(context.Background(), runner, 1, "/repo")
+	s := GetStatus(context.Background(), runner, &mockGhRunner{}, 1, "/repo")
 	if s.Error != nil {
 		t.Fatalf("unexpected error: %v", s.Error)
 	}
@@ -78,7 +78,7 @@ func TestGetStatus_DetachedHead(t *testing.T) {
 		"/repo:status:--porcelain":     {output: ""},
 	}}
 
-	s := GetStatus(context.Background(), runner, 0, "/repo")
+	s := GetStatus(context.Background(), runner, &mockGhRunner{}, 0, "/repo")
 	if s.Error != nil {
 		t.Fatalf("unexpected error: %v", s.Error)
 	}
@@ -92,7 +92,7 @@ func TestGetStatus_BranchError(t *testing.T) {
 		"/repo:rev-parse:--abbrev-ref": {err: errors.New("not a git repo")},
 	}}
 
-	s := GetStatus(context.Background(), runner, 0, "/repo")
+	s := GetStatus(context.Background(), runner, &mockGhRunner{}, 0, "/repo")
 	if s.Error == nil {
 		t.Fatal("expected error")
 	}
@@ -117,7 +117,7 @@ func TestGetAllStatuses(t *testing.T) {
 
 	isGitRepo := func(i int) bool { return i != 1 } // skip B
 
-	results := GetAllStatuses(context.Background(), runner, agents, isGitRepo)
+	results := GetAllStatuses(context.Background(), runner, &mockGhRunner{}, agents, isGitRepo)
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
 	}
