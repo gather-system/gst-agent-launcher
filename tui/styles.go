@@ -73,6 +73,14 @@ var (
 
 	conflictStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FFCC00"))
+
+	dashHeaderStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#FAFAFA")).
+			Background(lipgloss.Color("#444444"))
+
+	dashRowAltStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("#1A1A1A"))
 )
 
 // groupStyle returns the lipgloss style for a given group name.

@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 )
@@ -19,6 +20,8 @@ func (m Model) View() tea.View {
 		content = m.viewHelpOverlay()
 	case viewProject:
 		content = m.viewProjectSelect()
+	case viewDashboard:
+		content = m.viewDashboard()
 	default:
 		content = m.viewList()
 	}
@@ -98,13 +101,20 @@ func (m Model) viewList() string {
 
 		name := item.agent.Name
 		badge := m.healthBadge(item.index)
+		gitInfo := m.gitStatusLabel(item.index)
 		if !m.pathValid[item.index] {
 			name = invalidStyle.Render(name + " [!]")
 		} else if i == m.cursor {
 			name = cursorStyle.Render(name)
 		}
+		if m.runningAgents[item.index] {
+			name += " " + successStyle.Render("[R]")
+		}
 		if badge != "" {
 			name += " " + badge
+		}
+		if gitInfo != "" {
+			name += " " + gitInfo
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s %s\n", cursor, check, name))
@@ -139,6 +149,9 @@ func (m Model) viewList() string {
 			b.WriteString(warningStyle.Render("路徑不存在: " + item.agent.Path))
 		} else {
 			b.WriteString(dimStyle.Render(item.agent.Path))
+			if gs, ok := m.gitStatuses[item.index]; ok && gs.IssueID != "" {
+				b.WriteString("  " + confirmStyle.Render(gs.IssueID))
+			}
 			if hr, ok := m.healthResults[item.index]; ok {
 				if !hr.IsGitRepo {
 					b.WriteString("  " + dimStyle.Render("非 Git 倉庫"))
@@ -185,9 +198,15 @@ func (m Model) viewConfirm() string {
 
 	for _, agent := range agents {
 		valid := true
+		running := false
 		for i, a := range m.config.Agents {
-			if a.Name == agent.Name && !m.pathValid[i] {
-				valid = false
+			if a.Name == agent.Name {
+				if !m.pathValid[i] {
+					valid = false
+				}
+				if m.runningAgents[i] {
+					running = true
+				}
 				break
 			}
 		}
@@ -195,6 +214,10 @@ func (m Model) viewConfirm() string {
 			b.WriteString(fmt.Sprintf("  %s %s [%s] %s\n",
 				dimStyle.Render("●"), invalidStyle.Render(agent.Name), agent.Group,
 				warningStyle.Render("(路徑不存在，將跳過)")))
+		} else if running {
+			b.WriteString(fmt.Sprintf("  %s %s [%s] %s\n",
+				selectedStyle.Render("●"), agent.Name, agent.Group,
+				warningStyle.Render("(已在運行，將重新開啟)")))
 		} else {
 			b.WriteString(fmt.Sprintf("  %s %s [%s]\n",
 				selectedStyle.Render("●"), agent.Name, agent.Group))
@@ -321,9 +344,84 @@ func (m Model) viewHelpOverlay() string {
 	return b.String()
 }
 
+// viewDashboard renders the dashboard table view.
+func (m Model) viewDashboard() string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("GST Agent Dashboard"))
+	b.WriteString("\n\n")
+
+	if m.config == nil {
+		b.WriteString("Loading...\n")
+		return b.String()
+	}
+
+	// Table header.
+	header := fmt.Sprintf("  %-20s %-6s %-8s %-30s %-6s %-8s",
+		"Name", "Group", "Status", "Branch", "Dirty", "Health")
+	b.WriteString(dashHeaderStyle.Render(header))
+	b.WriteString("\n")
+
+	// Table rows.
+	for i, agent := range m.config.Agents {
+		status := dimStyle.Render("Stopped")
+		if m.runningAgents[i] {
+			status = successStyle.Render("Running")
+		}
+
+		branch := ""
+		dirty := ""
+		if gs, ok := m.gitStatuses[i]; ok {
+			branch = gs.Branch
+			if len(branch) > 28 {
+				branch = branch[:28] + ".."
+			}
+			if gs.DirtyCount > 0 {
+				dirty = fmt.Sprintf("*%d", gs.DirtyCount)
+			}
+		} else if m.gitLoading && m.pathValid[i] {
+			branch = "..."
+		}
+
+		healthStr := ""
+		if !m.pathValid[i] {
+			healthStr = "[!]"
+		} else if hr, ok := m.healthResults[i]; ok {
+			if !hr.IsGitRepo {
+				healthStr = "[!git]"
+			} else if hr.HasConflict {
+				healthStr = "[warn]"
+			}
+		}
+
+		style := groupStyle(agent.Group)
+		row := fmt.Sprintf("  %-20s %-6s %-8s %-30s %-6s %-8s",
+			agent.Name, style.Render(agent.Group), status, branch, dirty, healthStr)
+
+		if i%2 == 0 {
+			b.WriteString(row)
+		} else {
+			b.WriteString(dashRowAltStyle.Render(row))
+		}
+		b.WriteString("\n")
+	}
+
+	// Footer.
+	b.WriteString("\n")
+	now := time.Now().Format("15:04:05")
+	b.WriteString(dimStyle.Render(fmt.Sprintf("上次刷新: %s | 每 30 秒自動刷新", now)))
+	b.WriteString("\n")
+	b.WriteString(m.renderHelpBar())
+	b.WriteString("\n")
+
+	return b.String()
+}
+
 // renderHelpBar returns the help bar text for the current view state.
 func (m Model) renderHelpBar() string {
 	switch m.view {
+	case viewDashboard:
+		return helpStyle.Render("d:返回清單 q:退出")
 	case viewConfirm:
 		return helpStyle.Render("y:確認 n:取消")
 	case viewResult:
@@ -336,6 +434,6 @@ func (m Model) renderHelpBar() string {
 		if m.searchMode {
 			return helpStyle.Render("輸入搜尋 | Esc:清除 Enter:確認 Space:勾選")
 		}
-		return helpStyle.Render("↑↓/jk:導航 Space:勾選 Enter:啟動 /:搜尋 ?:幫助 M:Monitor Esc:清除 q:退出")
+		return helpStyle.Render("↑↓/jk:導航 Space:勾選 Enter:啟動 d:Dashboard /:搜尋 ?:幫助 q:退出")
 	}
 }

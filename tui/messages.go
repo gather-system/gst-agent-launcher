@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/gather-system/gst-agent-launcher/config"
+	gitpkg "github.com/gather-system/gst-agent-launcher/git"
 	"github.com/gather-system/gst-agent-launcher/health"
 	"github.com/gather-system/gst-agent-launcher/launcher"
 )
@@ -42,3 +43,17 @@ type healthResultMsg struct {
 	results      []health.CheckResult
 	gitAvailable bool
 }
+
+// gitStatusMsg is sent when git status checks complete.
+type gitStatusMsg struct {
+	statuses []gitpkg.RepoStatus
+}
+
+// processScanMsg is sent when process detection completes.
+type processScanMsg struct {
+	running map[int]bool
+	err     error
+}
+
+// dashboardTickMsg triggers dashboard auto-refresh.
+type dashboardTickMsg struct{ id int }

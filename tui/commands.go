@@ -8,8 +8,10 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/gather-system/gst-agent-launcher/config"
+	gitpkg "github.com/gather-system/gst-agent-launcher/git"
 	"github.com/gather-system/gst-agent-launcher/health"
 	"github.com/gather-system/gst-agent-launcher/launcher"
+	"github.com/gather-system/gst-agent-launcher/process"
 )
 
 // configWatchCh holds the channel from the config file watcher.
@@ -66,6 +68,36 @@ func healthCheckCmd(agents []config.Agent) tea.Cmd {
 		results, gitAvailable := checker.CheckAll(context.Background(), agents)
 		return healthResultMsg{results: results, gitAvailable: gitAvailable}
 	}
+}
+
+// gitStatusCmd fetches git status for all agents with valid paths asynchronously.
+func gitStatusCmd(agents []config.Agent, pathValid map[int]bool) tea.Cmd {
+	return func() tea.Msg {
+		runner := gitpkg.NewRunner()
+		isGitRepo := func(i int) bool { return pathValid[i] }
+		statuses := gitpkg.GetAllStatuses(context.Background(), runner, agents, isGitRepo)
+		return gitStatusMsg{statuses: statuses}
+	}
+}
+
+// processScanCmd scans for running agent processes asynchronously.
+func processScanCmd(agentNames []string) tea.Cmd {
+	return func() tea.Msg {
+		scanner := process.NewScanner()
+		procs, err := scanner.ScanRunning(context.Background())
+		if err != nil {
+			return processScanMsg{err: err}
+		}
+		running := process.MatchAgentNames(procs, agentNames)
+		return processScanMsg{running: running}
+	}
+}
+
+// dashboardRefreshCmd returns a tick command for dashboard auto-refresh.
+func dashboardRefreshCmd(id int) tea.Cmd {
+	return tea.Tick(30*time.Second, func(t time.Time) tea.Msg {
+		return dashboardTickMsg{id: id}
+	})
 }
 
 // doLaunch creates a command that performs the actual launch.

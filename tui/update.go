@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/gather-system/gst-agent-launcher/config"
+	gitpkg "github.com/gather-system/gst-agent-launcher/git"
 	"github.com/gather-system/gst-agent-launcher/health"
 )
 
@@ -27,8 +28,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.projectNames = buildProjectNames(m.config)
 		m.healthResults = make(map[int]health.CheckResult)
-		// Start config file watcher and health check.
-		return m, tea.Batch(startConfigWatcher(), healthCheckCmd(m.config.Agents))
+		m.gitStatuses = make(map[int]gitpkg.RepoStatus)
+		m.gitLoading = true
+		m.runningAgents = make(map[int]bool)
+		agentNames := make([]string, len(m.config.Agents))
+		for i, a := range m.config.Agents {
+			agentNames[i] = a.Name
+		}
+		// Start config file watcher and all async checks.
+		return m, tea.Batch(
+			startConfigWatcher(),
+			healthCheckCmd(m.config.Agents),
+			gitStatusCmd(m.config.Agents, m.pathValid),
+			processScanCmd(agentNames),
+		)
 
 	case configReloadedMsg:
 		// Preserve current selection by name.
@@ -69,6 +82,38 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, setToast(&m, "git 未安裝，部分功能停用")
 		}
 		return m, nil
+
+	case gitStatusMsg:
+		m.gitLoading = false
+		m.gitStatuses = make(map[int]gitpkg.RepoStatus)
+		for _, s := range msg.statuses {
+			if s.Error == nil {
+				m.gitStatuses[s.AgentIndex] = s
+			}
+		}
+		return m, nil
+
+	case processScanMsg:
+		if msg.err != nil {
+			return m, setToast(&m, "Process 掃描不可用")
+		}
+		m.runningAgents = msg.running
+		return m, nil
+
+	case dashboardTickMsg:
+		if msg.id != m.dashboardTimer || m.view != viewDashboard {
+			return m, nil
+		}
+		agentNames := make([]string, len(m.config.Agents))
+		for i, a := range m.config.Agents {
+			agentNames[i] = a.Name
+		}
+		return m, tea.Batch(
+			healthCheckCmd(m.config.Agents),
+			gitStatusCmd(m.config.Agents, m.pathValid),
+			processScanCmd(agentNames),
+			dashboardRefreshCmd(m.dashboardTimer),
+		)
 
 	case errMsg:
 		m.err = msg.err
@@ -152,6 +197,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case viewProject:
 			return m.updateProject(msg)
+		case viewDashboard:
+			return m.updateDashboard(msg)
 		}
 	}
 
@@ -249,6 +296,20 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			})
 		}
 
+	case "d":
+		m.view = viewDashboard
+		m.dashboardTimer++
+		agentNames := make([]string, len(m.config.Agents))
+		for i, a := range m.config.Agents {
+			agentNames[i] = a.Name
+		}
+		return m, tea.Batch(
+			healthCheckCmd(m.config.Agents),
+			gitStatusCmd(m.config.Agents, m.pathValid),
+			processScanCmd(agentNames),
+			dashboardRefreshCmd(m.dashboardTimer),
+		)
+
 	case "?":
 		m.view = viewHelp
 
@@ -327,6 +388,18 @@ func (m Model) updateProject(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+
+// updateDashboard handles key presses in the dashboard view.
+func (m Model) updateDashboard(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "d", "escape":
+		m.dashboardTimer++ // cancel pending tick
+		m.view = viewList
+	case "q", "ctrl+c":
+		return m, tea.Quit
+	}
+	return m, nil
+}
 
 // updateResult handles key presses in the result view.
 func (m Model) updateResult(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {

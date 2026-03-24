@@ -1,12 +1,14 @@
 package tui
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/gather-system/gst-agent-launcher/config"
+	gitpkg "github.com/gather-system/gst-agent-launcher/git"
 	"github.com/gather-system/gst-agent-launcher/health"
 	"github.com/gather-system/gst-agent-launcher/launcher"
 )
@@ -15,11 +17,12 @@ import (
 type viewState int
 
 const (
-	viewList    viewState = iota // agent selection list
-	viewConfirm                 // launch confirmation
-	viewResult                  // launch result
-	viewHelp                    // help overlay
-	viewProject                 // project selection
+	viewList      viewState = iota // agent selection list
+	viewConfirm                   // launch confirmation
+	viewResult                    // launch result
+	viewHelp                      // help overlay
+	viewProject                   // project selection
+	viewDashboard                 // dashboard table view
 )
 
 // groupOrder defines the display order of groups.
@@ -42,6 +45,10 @@ type Model struct {
 	pathValid       map[int]bool  // keyed by agent index, true if path exists
 	healthResults   map[int]health.CheckResult // keyed by agent index
 	gitAvailable    bool          // true if git is installed
+	gitStatuses     map[int]gitpkg.RepoStatus // keyed by agent index
+	gitLoading      bool          // true while git status is being fetched
+	runningAgents   map[int]bool  // keyed by agent index, true if process detected
+	dashboardTimer  int           // dashboard tick generation ID
 	monitorOn       bool          // monitor toggle
 	monitorLaunched bool          // true after Monitor has been launched
 	view            viewState     // current screen
@@ -291,6 +298,22 @@ func (m Model) healthBadge(agentIndex int) string {
 		return conflictStyle.Render("[⚠]")
 	}
 	return ""
+}
+
+// gitStatusLabel returns a formatted git status string for an agent, or "" if not available.
+func (m Model) gitStatusLabel(agentIndex int) string {
+	if m.gitLoading && m.pathValid[agentIndex] {
+		return dimStyle.Render("...")
+	}
+	gs, ok := m.gitStatuses[agentIndex]
+	if !ok {
+		return ""
+	}
+	label := dimStyle.Render(gs.Branch)
+	if gs.DirtyCount > 0 {
+		label += " " + warningStyle.Render(fmt.Sprintf("*%d", gs.DirtyCount))
+	}
+	return label
 }
 
 // groupCount returns the number of selected and total agents in a group.
