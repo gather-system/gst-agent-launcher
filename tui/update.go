@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/gather-system/gst-agent-launcher/config"
+	gitpkg "github.com/gather-system/gst-agent-launcher/git"
 )
 
 // Update handles incoming messages and updates the model.
@@ -25,8 +26,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.pathValid[i] = err == nil
 		}
 		m.projectNames = buildProjectNames(m.config)
-		// Start config file watcher.
-		return m, startConfigWatcher()
+		m.gitStatuses = make(map[int]gitpkg.RepoStatus)
+		m.gitLoading = true
+		// Start config file watcher and git status check.
+		return m, tea.Batch(startConfigWatcher(), gitStatusCmd(m.config.Agents, m.pathValid))
 
 	case configReloadedMsg:
 		// Preserve current selection by name.
@@ -55,6 +58,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.cursor = firstSelectableIndex(m.items)
 		}
 		return m, tea.Batch(setToast(&m, "設定檔已重新載入"), waitForConfigReload())
+
+	case gitStatusMsg:
+		m.gitLoading = false
+		m.gitStatuses = make(map[int]gitpkg.RepoStatus)
+		for _, s := range msg.statuses {
+			if s.Error == nil {
+				m.gitStatuses[s.AgentIndex] = s
+			}
+		}
+		return m, nil
 
 	case errMsg:
 		m.err = msg.err

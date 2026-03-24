@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/gather-system/gst-agent-launcher/config"
+	gitpkg "github.com/gather-system/gst-agent-launcher/git"
 	"github.com/gather-system/gst-agent-launcher/launcher"
 )
 
@@ -35,3 +36,8 @@ type monitorResultMsg struct{ err error }
 
 // toastMsg clears the toast after timeout.
 type toastMsg struct{ id int }
+
+// gitStatusMsg is sent when git status checks complete.
+type gitStatusMsg struct {
+	statuses []gitpkg.RepoStatus
+}

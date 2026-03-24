@@ -1,12 +1,14 @@
 package tui
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/gather-system/gst-agent-launcher/config"
+	gitpkg "github.com/gather-system/gst-agent-launcher/git"
 	"github.com/gather-system/gst-agent-launcher/launcher"
 )
 
@@ -39,6 +41,8 @@ type Model struct {
 	cursor          int           // current cursor position in items
 	selected        map[int]bool  // keyed by agent index in config.Agents
 	pathValid       map[int]bool  // keyed by agent index, true if path exists
+	gitStatuses     map[int]gitpkg.RepoStatus // keyed by agent index
+	gitLoading      bool          // true while git status is being fetched
 	monitorOn       bool          // monitor toggle
 	monitorLaunched bool          // true after Monitor has been launched
 	view            viewState     // current screen
@@ -270,6 +274,22 @@ func (m *Model) adjustCursorForSearch() {
 			return
 		}
 	}
+}
+
+// gitStatusLabel returns a formatted git status string for an agent, or "" if not available.
+func (m Model) gitStatusLabel(agentIndex int) string {
+	if m.gitLoading && m.pathValid[agentIndex] {
+		return dimStyle.Render("...")
+	}
+	gs, ok := m.gitStatuses[agentIndex]
+	if !ok {
+		return ""
+	}
+	label := dimStyle.Render(gs.Branch)
+	if gs.DirtyCount > 0 {
+		label += " " + warningStyle.Render(fmt.Sprintf("*%d", gs.DirtyCount))
+	}
+	return label
 }
 
 // groupCount returns the number of selected and total agents in a group.

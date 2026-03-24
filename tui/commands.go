@@ -1,12 +1,14 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/gather-system/gst-agent-launcher/config"
+	gitpkg "github.com/gather-system/gst-agent-launcher/git"
 	"github.com/gather-system/gst-agent-launcher/launcher"
 )
 
@@ -55,6 +57,16 @@ func groupToast(m *Model, group string) tea.Cmd {
 		return setToast(m, fmt.Sprintf("已勾選 %s 群組 (%d/%d)", group, sel, total))
 	}
 	return setToast(m, fmt.Sprintf("已取消 %s 群組", group))
+}
+
+// gitStatusCmd fetches git status for all agents with valid paths asynchronously.
+func gitStatusCmd(agents []config.Agent, pathValid map[int]bool) tea.Cmd {
+	return func() tea.Msg {
+		runner := gitpkg.NewRunner()
+		isGitRepo := func(i int) bool { return pathValid[i] }
+		statuses := gitpkg.GetAllStatuses(context.Background(), runner, agents, isGitRepo)
+		return gitStatusMsg{statuses: statuses}
+	}
 }
 
 // doLaunch creates a command that performs the actual launch.
