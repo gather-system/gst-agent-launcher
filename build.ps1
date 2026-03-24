@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$version = "0.3.0"
+$version = "0.4.0"
 $commit = git rev-parse --short HEAD
 $date = Get-Date -Format "yyyy-MM-dd"
 
