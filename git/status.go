@@ -15,6 +15,7 @@ type RepoStatus struct {
 	Branch     string
 	DirtyCount int
 	IssueID    string
+	HasOpenPR  bool
 	Error      error
 }
 
@@ -43,6 +44,9 @@ func GetStatus(ctx context.Context, runner Runner, index int, path string) RepoS
 	if porcelain != "" {
 		result.DirtyCount = len(strings.Split(porcelain, "\n"))
 	}
+
+	// Check for open PR (independent, uses its own timeout).
+	result.HasOpenPR = CheckOpenPR(ctx, path, branch)
 
 	return result
 }

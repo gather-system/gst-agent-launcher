@@ -113,6 +113,9 @@ func (m Model) viewList() string {
 		if badge != "" {
 			name += " " + badge
 		}
+		if gs, ok := m.gitStatuses[item.index]; ok && gs.HasOpenPR {
+			name += " " + successStyle.Render("[PR]")
+		}
 		if gitInfo != "" {
 			name += " " + gitInfo
 		}
