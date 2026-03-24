@@ -67,6 +67,12 @@ var (
 	invalidStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#626262")).
 			Faint(true)
+
+	notGitStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#626262"))
+
+	conflictStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFCC00"))
 )
 
 // groupStyle returns the lipgloss style for a given group name.

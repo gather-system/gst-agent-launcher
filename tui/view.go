@@ -97,10 +97,14 @@ func (m Model) viewList() string {
 		}
 
 		name := item.agent.Name
+		badge := m.healthBadge(item.index)
 		if !m.pathValid[item.index] {
 			name = invalidStyle.Render(name + " [!]")
 		} else if i == m.cursor {
 			name = cursorStyle.Render(name)
+		}
+		if badge != "" {
+			name += " " + badge
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s %s\n", cursor, check, name))
@@ -128,13 +132,20 @@ func (m Model) viewList() string {
 	b.WriteString(statusBarStyle.Render(statusText))
 	b.WriteString("\n")
 
-	// Agent details (path of current cursor item)
+	// Agent details (path + health info of current cursor item)
 	if m.cursor >= 0 && m.cursor < len(m.items) && !m.items[m.cursor].isGroup {
 		item := m.items[m.cursor]
-		if m.pathValid[item.index] {
-			b.WriteString(dimStyle.Render(item.agent.Path))
-		} else {
+		if !m.pathValid[item.index] {
 			b.WriteString(warningStyle.Render("路徑不存在: " + item.agent.Path))
+		} else {
+			b.WriteString(dimStyle.Render(item.agent.Path))
+			if hr, ok := m.healthResults[item.index]; ok {
+				if !hr.IsGitRepo {
+					b.WriteString("  " + dimStyle.Render("非 Git 倉庫"))
+				} else if hr.HasConflict {
+					b.WriteString("  " + warningStyle.Render("有未解決的 merge conflict"))
+				}
+			}
 		}
 		b.WriteString("\n")
 	}

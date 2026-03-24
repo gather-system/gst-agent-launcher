@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/gather-system/gst-agent-launcher/config"
+	"github.com/gather-system/gst-agent-launcher/health"
 	"github.com/gather-system/gst-agent-launcher/launcher"
 )
 
@@ -35,3 +36,9 @@ type monitorResultMsg struct{ err error }
 
 // toastMsg clears the toast after timeout.
 type toastMsg struct{ id int }
+
+// healthResultMsg is sent when health checks complete.
+type healthResultMsg struct {
+	results      []health.CheckResult
+	gitAvailable bool
+}

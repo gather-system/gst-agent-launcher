@@ -1,12 +1,14 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/gather-system/gst-agent-launcher/config"
+	"github.com/gather-system/gst-agent-launcher/health"
 	"github.com/gather-system/gst-agent-launcher/launcher"
 )
 
@@ -55,6 +57,15 @@ func groupToast(m *Model, group string) tea.Cmd {
 		return setToast(m, fmt.Sprintf("已勾選 %s 群組 (%d/%d)", group, sel, total))
 	}
 	return setToast(m, fmt.Sprintf("已取消 %s 群組", group))
+}
+
+// healthCheckCmd runs health checks on all agents asynchronously.
+func healthCheckCmd(agents []config.Agent) tea.Cmd {
+	return func() tea.Msg {
+		checker := health.NewChecker()
+		results, gitAvailable := checker.CheckAll(context.Background(), agents)
+		return healthResultMsg{results: results, gitAvailable: gitAvailable}
+	}
 }
 
 // doLaunch creates a command that performs the actual launch.

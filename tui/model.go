@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/gather-system/gst-agent-launcher/config"
+	"github.com/gather-system/gst-agent-launcher/health"
 	"github.com/gather-system/gst-agent-launcher/launcher"
 )
 
@@ -39,6 +40,8 @@ type Model struct {
 	cursor          int           // current cursor position in items
 	selected        map[int]bool  // keyed by agent index in config.Agents
 	pathValid       map[int]bool  // keyed by agent index, true if path exists
+	healthResults   map[int]health.CheckResult // keyed by agent index
+	gitAvailable    bool          // true if git is installed
 	monitorOn       bool          // monitor toggle
 	monitorLaunched bool          // true after Monitor has been launched
 	view            viewState     // current screen
@@ -270,6 +273,24 @@ func (m *Model) adjustCursorForSearch() {
 			return
 		}
 	}
+}
+
+// healthBadge returns the health status badge for an agent, or "" if healthy.
+func (m Model) healthBadge(agentIndex int) string {
+	hr, ok := m.healthResults[agentIndex]
+	if !ok {
+		return ""
+	}
+	if !hr.PathValid {
+		return "" // [!] is already shown by the existing invalidStyle logic
+	}
+	if !hr.IsGitRepo {
+		return notGitStyle.Render("[!git]")
+	}
+	if hr.HasConflict {
+		return conflictStyle.Render("[⚠]")
+	}
+	return ""
 }
 
 // groupCount returns the number of selected and total agents in a group.
