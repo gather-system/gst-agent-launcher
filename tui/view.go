@@ -24,6 +24,8 @@ func (m Model) View() tea.View {
 		content = m.viewDashboard()
 	case viewDeps:
 		content = m.viewDepsPrompt()
+	case viewGitResult:
+		content = m.viewGitResultTable()
 	default:
 		content = m.viewList()
 	}
@@ -450,9 +452,56 @@ func (m Model) viewDepsPrompt() string {
 	return b.String()
 }
 
+// viewGitResultTable renders the batch git operation result table.
+func (m Model) viewGitResultTable() string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("GST Agent Launcher — Git 操作結果"))
+	b.WriteString("\n\n")
+
+	if m.batchResults == nil {
+		b.WriteString("Processing...\n")
+		return b.String()
+	}
+
+	successCount := 0
+	failCount := 0
+
+	for _, r := range m.batchResults {
+		icon := successStyle.Render("✓")
+		if !r.Success {
+			icon = warningStyle.Render("✗")
+			failCount++
+		} else {
+			successCount++
+		}
+
+		output := r.Output
+		if r.Error != nil {
+			output = r.Error.Error()
+		}
+		if len(output) > 60 {
+			output = output[:60] + "..."
+		}
+
+		b.WriteString(fmt.Sprintf("  %s %-20s %s\n", icon, r.AgentName, dimStyle.Render(output)))
+	}
+
+	b.WriteString("\n")
+	summary := fmt.Sprintf("成功: %d  失敗: %d  總計: %d", successCount, failCount, len(m.batchResults))
+	b.WriteString(statusBarStyle.Render(summary))
+	b.WriteString("\n")
+	b.WriteString(m.renderHelpBar())
+	b.WriteString("\n")
+
+	return b.String()
+}
+
 // renderHelpBar returns the help bar text for the current view state.
 func (m Model) renderHelpBar() string {
 	switch m.view {
+	case viewGitResult:
+		return helpStyle.Render("任意鍵:返回清單 q:退出")
 	case viewDashboard:
 		return helpStyle.Render("d:返回清單 q:退出")
 	case viewDeps:
@@ -469,6 +518,6 @@ func (m Model) renderHelpBar() string {
 		if m.searchMode {
 			return helpStyle.Render("輸入搜尋 | Esc:清除 Enter:確認 Space:勾選")
 		}
-		return helpStyle.Render("↑↓/jk:導航 Space:勾選 Enter:啟動 d:Dashboard /:搜尋 ?:幫助 q:退出")
+		return helpStyle.Render("↑↓/jk:導航 Space:勾選 Enter:啟動 d:Dashboard g:Pull G:Status /:搜尋 ?:幫助 q:退出")
 	}
 }

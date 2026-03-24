@@ -101,6 +101,24 @@ func dashboardRefreshCmd(id int) tea.Cmd {
 	})
 }
 
+// pullAllCmd runs git pull on target agents.
+func pullAllCmd(agents []config.Agent, pathValid map[int]bool) tea.Cmd {
+	return func() tea.Msg {
+		runner := gitpkg.NewRunner()
+		results := gitpkg.PullAll(context.Background(), runner, agents, pathValid)
+		return batchCompleteMsg{results: results}
+	}
+}
+
+// statusAllCmd runs git status --short on target agents.
+func statusAllCmd(agents []config.Agent, pathValid map[int]bool) tea.Cmd {
+	return func() tea.Msg {
+		runner := gitpkg.NewRunner()
+		results := gitpkg.StatusAll(context.Background(), runner, agents, pathValid)
+		return batchCompleteMsg{results: results}
+	}
+}
+
 // doLaunch creates a command that performs the actual launch.
 func (m Model) doLaunch() tea.Cmd {
 	agents := m.selectedAgents()

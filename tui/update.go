@@ -115,6 +115,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			dashboardRefreshCmd(m.dashboardTimer),
 		)
 
+	case batchCompleteMsg:
+		m.batchLoading = false
+		m.batchResults = msg.results
+		m.view = viewGitResult
+		return m, nil
+
 	case errMsg:
 		m.err = msg.err
 		return m, nil
@@ -201,6 +207,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateDashboard(msg)
 		case viewDeps:
 			return m.updateDeps(msg)
+		case viewGitResult:
+			return m.updateGitResult(msg)
 		}
 	}
 
@@ -331,6 +339,18 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.searchMode = true
 		m.searchQuery = ""
 
+	case "g":
+		if m.config != nil {
+			m.batchLoading = true
+			return m, pullAllCmd(m.config.Agents, m.pathValid)
+		}
+
+	case "G":
+		if m.config != nil {
+			m.batchLoading = true
+			return m, statusAllCmd(m.config.Agents, m.pathValid)
+		}
+
 	case "M":
 		if m.config != nil && m.config.Monitor.Command != "" {
 			return m, m.doLaunchMonitorOnly()
@@ -396,6 +416,19 @@ func (m Model) updateProject(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+
+// updateGitResult handles key presses in the git result view.
+func (m Model) updateGitResult(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q", "ctrl+c":
+		return m, tea.Quit
+	default:
+		m.batchResults = nil
+		m.view = viewList
+		// Refresh git status after batch operation.
+		return m, gitStatusCmd(m.config.Agents, m.pathValid)
+	}
+}
 
 // updateDashboard handles key presses in the dashboard view.
 func (m Model) updateDashboard(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
