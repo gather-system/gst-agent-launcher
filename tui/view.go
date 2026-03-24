@@ -22,6 +22,8 @@ func (m Model) View() tea.View {
 		content = m.viewProjectSelect()
 	case viewDashboard:
 		content = m.viewDashboard()
+	case viewDeps:
+		content = m.viewDepsPrompt()
 	default:
 		content = m.viewList()
 	}
@@ -425,11 +427,36 @@ func (m Model) viewDashboard() string {
 	return b.String()
 }
 
+// viewDepsPrompt renders the dependency prompt screen.
+func (m Model) viewDepsPrompt() string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("GST Agent Launcher"))
+	b.WriteString("\n\n")
+
+	b.WriteString(warningStyle.Render("以下依賴尚未選取或運行："))
+	b.WriteString("\n\n")
+
+	for _, dep := range m.unmetDeps {
+		b.WriteString(fmt.Sprintf("  %s %s\n", warningStyle.Render("●"), dep))
+	}
+
+	b.WriteString("\n")
+	b.WriteString("是否一併啟動？\n")
+	b.WriteString("\n")
+	b.WriteString(m.renderHelpBar())
+	b.WriteString("\n")
+
+	return b.String()
+}
+
 // renderHelpBar returns the help bar text for the current view state.
 func (m Model) renderHelpBar() string {
 	switch m.view {
 	case viewDashboard:
 		return helpStyle.Render("d:返回清單 q:退出")
+	case viewDeps:
+		return helpStyle.Render("y:一併啟動 n:跳過 Esc:返回")
 	case viewConfirm:
 		return helpStyle.Render("y:確認 n:取消")
 	case viewResult:

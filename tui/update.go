@@ -199,6 +199,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateProject(msg)
 		case viewDashboard:
 			return m.updateDashboard(msg)
+		case viewDeps:
+			return m.updateDeps(msg)
 		}
 	}
 
@@ -228,7 +230,13 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	case "enter":
 		if m.selectedCount() > 0 || m.monitorOn {
-			m.view = viewConfirm
+			unmet := m.checkDependencies()
+			if len(unmet) > 0 {
+				m.unmetDeps = unmet
+				m.view = viewDeps
+			} else {
+				m.view = viewConfirm
+			}
 		} else {
 			return m, setToast(&m, "請先選擇至少一個 Agent")
 		}
@@ -409,6 +417,25 @@ func (m Model) updateResult(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	default:
 		m.resetSelection()
 		m.view = viewList
+	}
+	return m, nil
+}
+
+// updateDeps handles key presses in the dependency prompt view.
+func (m Model) updateDeps(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "y":
+		m.selectDependencies(m.unmetDeps)
+		m.unmetDeps = nil
+		m.view = viewConfirm
+	case "n":
+		m.unmetDeps = nil
+		m.view = viewConfirm
+	case "escape", "q":
+		m.unmetDeps = nil
+		m.view = viewList
+	case "ctrl+c":
+		return m, tea.Quit
 	}
 	return m, nil
 }
