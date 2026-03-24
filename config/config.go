@@ -12,9 +12,10 @@ var defaultConfigFS embed.FS
 
 // Agent represents a single agent entry in the configuration.
 type Agent struct {
-	Name  string `json:"name"`
-	Path  string `json:"path"`
-	Group string `json:"group"`
+	Name         string   `json:"name"`
+	Path         string   `json:"path"`
+	Group        string   `json:"group"`
+	Dependencies []string `json:"dependencies,omitempty"`
 }
 
 // Monitor represents the monitor configuration.
