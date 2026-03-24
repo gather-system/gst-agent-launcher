@@ -136,7 +136,9 @@ func (m Model) viewList() string {
 	// Status bar
 	b.WriteString("\n")
 	var statusText string
-	if m.searchMode {
+	if m.batchLoading {
+		statusText = warningStyle.Render("Git 操作執行中...")
+	} else if m.searchMode {
 		statusText = fmt.Sprintf("搜尋: %s_", m.searchQuery)
 	} else {
 		monitorStatus := "OFF"

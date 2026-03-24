@@ -340,15 +340,15 @@ func (m Model) updateList(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.searchQuery = ""
 
 	case "g":
-		if m.config != nil {
+		if m.config != nil && !m.batchLoading {
 			m.batchLoading = true
-			return m, pullAllCmd(m.config.Agents, m.pathValid)
+			return m, pullAllCmd(m.config.Agents, m.pathValid, m.selectedForBatch())
 		}
 
 	case "G":
-		if m.config != nil {
+		if m.config != nil && !m.batchLoading {
 			m.batchLoading = true
-			return m, statusAllCmd(m.config.Agents, m.pathValid)
+			return m, statusAllCmd(m.config.Agents, m.pathValid, m.selectedForBatch())
 		}
 
 	case "M":

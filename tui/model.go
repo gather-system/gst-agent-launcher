@@ -374,6 +374,15 @@ func (m *Model) selectDependencies(deps []string) {
 	}
 }
 
+// selectedForBatch returns the set of agent indices to run batch git on.
+// If agents are selected, use those; otherwise return nil (= all pathValid).
+func (m Model) selectedForBatch() map[int]bool {
+	if m.selectedCount() > 0 {
+		return m.selected
+	}
+	return nil
+}
+
 // groupCount returns the number of selected and total agents in a group.
 func (m Model) groupCount(group string) (selected, total int) {
 	if m.config == nil {

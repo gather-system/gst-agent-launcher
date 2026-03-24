@@ -102,21 +102,38 @@ func dashboardRefreshCmd(id int) tea.Cmd {
 }
 
 // pullAllCmd runs git pull on target agents.
-func pullAllCmd(agents []config.Agent, pathValid map[int]bool) tea.Cmd {
+func pullAllCmd(agents []config.Agent, pathValid map[int]bool, selected map[int]bool) tea.Cmd {
 	return func() tea.Msg {
 		runner := gitpkg.NewRunner()
-		results := gitpkg.PullAll(context.Background(), runner, agents, pathValid)
+		filter := mergeFilter(pathValid, selected)
+		results := gitpkg.PullAll(context.Background(), runner, agents, filter)
 		return batchCompleteMsg{results: results}
 	}
 }
 
 // statusAllCmd runs git status --short on target agents.
-func statusAllCmd(agents []config.Agent, pathValid map[int]bool) tea.Cmd {
+func statusAllCmd(agents []config.Agent, pathValid map[int]bool, selected map[int]bool) tea.Cmd {
 	return func() tea.Msg {
 		runner := gitpkg.NewRunner()
-		results := gitpkg.StatusAll(context.Background(), runner, agents, pathValid)
+		filter := mergeFilter(pathValid, selected)
+		results := gitpkg.StatusAll(context.Background(), runner, agents, filter)
 		return batchCompleteMsg{results: results}
 	}
+}
+
+// mergeFilter returns pathValid filtered by selected.
+// If selected is nil, returns pathValid as-is (all valid agents).
+func mergeFilter(pathValid map[int]bool, selected map[int]bool) map[int]bool {
+	if selected == nil {
+		return pathValid
+	}
+	merged := make(map[int]bool)
+	for idx := range selected {
+		if pathValid[idx] {
+			merged[idx] = true
+		}
+	}
+	return merged
 }
 
 // doLaunch creates a command that performs the actual launch.
