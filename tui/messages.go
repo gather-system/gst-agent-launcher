@@ -57,3 +57,8 @@ type processScanMsg struct {
 
 // dashboardTickMsg triggers dashboard auto-refresh.
 type dashboardTickMsg struct{ id int }
+
+// batchCompleteMsg is sent when a batch git operation completes.
+type batchCompleteMsg struct {
+	results []gitpkg.BatchResult
+}

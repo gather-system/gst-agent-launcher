@@ -24,6 +24,7 @@ const (
 	viewProject                   // project selection
 	viewDashboard                 // dashboard table view
 	viewDeps                      // dependency prompt
+	viewGitResult                 // batch git operation result
 )
 
 // groupOrder defines the display order of groups.
@@ -50,6 +51,8 @@ type Model struct {
 	gitLoading      bool          // true while git status is being fetched
 	runningAgents   map[int]bool  // keyed by agent index, true if process detected
 	dashboardTimer  int           // dashboard tick generation ID
+	batchResults    []gitpkg.BatchResult // results from batch git operation
+	batchLoading    bool          // true while batch operation is running
 	monitorOn       bool          // monitor toggle
 	monitorLaunched bool          // true after Monitor has been launched
 	view            viewState     // current screen
@@ -369,6 +372,15 @@ func (m *Model) selectDependencies(deps []string) {
 			m.selected[i] = true
 		}
 	}
+}
+
+// selectedForBatch returns the set of agent indices to run batch git on.
+// If agents are selected, use those; otherwise return nil (= all pathValid).
+func (m Model) selectedForBatch() map[int]bool {
+	if m.selectedCount() > 0 {
+		return m.selected
+	}
+	return nil
 }
 
 // groupCount returns the number of selected and total agents in a group.
