@@ -23,6 +23,7 @@ const (
 	viewHelp                      // help overlay
 	viewProject                   // project selection
 	viewDashboard                 // dashboard table view
+	viewDeps                      // dependency prompt
 )
 
 // groupOrder defines the display order of groups.
@@ -62,6 +63,7 @@ type Model struct {
 	projectCursor   int      // cursor position in project list
 	lastClickY      int      // last mouse click Y for double-click detection
 	lastClickTime   int64    // last mouse click time (UnixMilli) for double-click
+	unmetDeps       []string // unmet dependency agent names (for viewDeps prompt)
 }
 
 // NewModel creates a new Model with default state.
@@ -314,6 +316,59 @@ func (m Model) gitStatusLabel(agentIndex int) string {
 		label += " " + warningStyle.Render(fmt.Sprintf("*%d", gs.DirtyCount))
 	}
 	return label
+}
+
+// checkDependencies returns unmet dependency agent names for all selected agents.
+// A dependency is "met" if the dependency agent is already selected or running.
+func (m Model) checkDependencies() []string {
+	if m.config == nil {
+		return nil
+	}
+
+	// Build name→index map.
+	nameToIndex := make(map[string]int)
+	for i, a := range m.config.Agents {
+		nameToIndex[a.Name] = i
+	}
+
+	seen := make(map[string]bool)
+	var unmet []string
+
+	for i, agent := range m.config.Agents {
+		if !m.selected[i] {
+			continue
+		}
+		for _, dep := range agent.Dependencies {
+			if seen[dep] {
+				continue
+			}
+			idx, exists := nameToIndex[dep]
+			if !exists {
+				continue // unknown dependency, skip
+			}
+			if !m.selected[idx] && !m.runningAgents[idx] {
+				unmet = append(unmet, dep)
+				seen[dep] = true
+			}
+		}
+	}
+	return unmet
+}
+
+// selectDependencies selects all agents matching the given dependency names.
+func (m *Model) selectDependencies(deps []string) {
+	if m.config == nil {
+		return
+	}
+	nameSet := make(map[string]bool)
+	for _, d := range deps {
+		nameSet[d] = true
+	}
+	for i, agent := range m.config.Agents {
+		if nameSet[agent.Name] {
+			m.selected[i] = true
+		}
+	}
 }
 
 // groupCount returns the number of selected and total agents in a group.
